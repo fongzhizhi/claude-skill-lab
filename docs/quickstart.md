@@ -4,6 +4,6 @@
 
 内容规划：
 
-- 最小可用流程（`lab setup` → `lab deploy skill-forge` → 对话中创建技能）
+- 最小可用流程（`lab deploy skill-forge` → 对话中创建技能）
 - 导入已有模块
 - 常见问题

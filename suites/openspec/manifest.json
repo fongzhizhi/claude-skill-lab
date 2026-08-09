@@ -1,0 +1,36 @@
+{
+  "name": "openspec",
+  "version": "1.8.0",
+  "description": "OpenSpec 官方工作流套件：propose / apply / update / sync / archive / explore 六个斜杠命令（/opsx:*）及配套的六个技能（openspec-*），基于 @fission-ai/openspec CLI。",
+  "type": "suite",
+  "mappings": [
+    {
+      "source": "commands/opsx/*.md",
+      "target": "{HOME}/.claude/commands/opsx/"
+    },
+    {
+      "source": "skills/openspec-apply-change/SKILL.md",
+      "target": "{HOME}/.claude/skills/openspec-apply-change/"
+    },
+    {
+      "source": "skills/openspec-archive-change/SKILL.md",
+      "target": "{HOME}/.claude/skills/openspec-archive-change/"
+    },
+    {
+      "source": "skills/openspec-explore/SKILL.md",
+      "target": "{HOME}/.claude/skills/openspec-explore/"
+    },
+    {
+      "source": "skills/openspec-propose/SKILL.md",
+      "target": "{HOME}/.claude/skills/openspec-propose/"
+    },
+    {
+      "source": "skills/openspec-sync-specs/SKILL.md",
+      "target": "{HOME}/.claude/skills/openspec-sync-specs/"
+    },
+    {
+      "source": "skills/openspec-update-change/SKILL.md",
+      "target": "{HOME}/.claude/skills/openspec-update-change/"
+    }
+  ]
+}

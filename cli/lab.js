@@ -3,7 +3,6 @@
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
-const readline = require("readline");
 
 // ============================================
 // 配置
@@ -42,30 +41,6 @@ function getDistFileName(type, name) {
   return pattern.replace("{name}", name);
 }
 
-// VSCode 配置路径（跨平台）
-function getVSCodeSettingsPath() {
-  const platform = process.platform;
-  if (platform === "win32") {
-    return path.join(
-      process.env.APPDATA || "",
-      "Code",
-      "User",
-      "settings.json",
-    );
-  } else if (platform === "darwin") {
-    return path.join(
-      HOME,
-      "Library",
-      "Application Support",
-      "Code",
-      "User",
-      "settings.json",
-    );
-  } else {
-    return path.join(HOME, ".config", "Code", "User", "settings.json");
-  }
-}
-
 // ============================================
 // 工具函数
 // ============================================
@@ -86,6 +61,14 @@ function success(msg) {
 
 function info(msg) {
   console.log("ℹ️  " + msg);
+}
+
+// 简单模式匹配：* 匹配所有，*.* 匹配带点文件，*.ext 匹配扩展名，其余精确匹配
+function matchPattern(file, pattern) {
+  if (pattern === "*") return true;
+  if (pattern === "*.*") return file.includes(".");
+  if (pattern.startsWith("*.")) return file.endsWith(pattern.substring(1));
+  return file === pattern;
 }
 
 function copyDir(src, dest) {
@@ -467,7 +450,7 @@ function cmdList() {
     log("");
     log("聚合套件:");
     for (const name of suiteNames) {
-      log(`  suites/${name}`, 1);
+      log(`  ${name} (suites)`, 1);
     }
   }
 
@@ -523,26 +506,45 @@ function cmdStatus() {
     }
   }
 
-  // 检查套件（简化：检查 manifest 中第一个文件）
+  // 检查套件：按 manifest 逐条核对目标文件（与部署逻辑对称）
   const suiteNames = Object.keys(modules.suites).sort();
   for (const name of suiteNames) {
-    const manifestPath = path.join(modules.suites[name], "manifest.json");
-    if (fs.existsSync(manifestPath)) {
-      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
-      const mappings = manifest.mappings || [];
-      let found = false;
-      for (const mapping of mappings) {
-        const target = mapping.target.replace(/\{HOME\}/g, HOME);
-        if (fs.existsSync(target) || fs.existsSync(path.dirname(target))) {
-          found = true;
-          break;
+    const suitePath = modules.suites[name];
+    const manifestPath = path.join(suitePath, "manifest.json");
+    if (!fs.existsSync(manifestPath)) continue;
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+    const distBase = path.join(suitePath, "dist");
+
+    let deployed = 0;
+    const missing = [];
+    for (const mapping of manifest.mappings || []) {
+      const sourceDir = path.dirname(mapping.source);
+      const sourcePattern = path.basename(mapping.source);
+      const fullSourceDir = path.join(distBase, sourceDir);
+      if (!fs.existsSync(fullSourceDir)) continue;
+
+      const target = mapping.target.replace(/\{HOME\}/g, HOME);
+      const files = fs.readdirSync(fullSourceDir);
+      for (const file of files) {
+        if (!matchPattern(file, sourcePattern)) continue;
+        const destFile =
+          target.endsWith(path.sep) || target.endsWith("/")
+            ? path.join(target, file)
+            : target;
+        if (fs.existsSync(destFile)) {
+          deployed++;
+        } else {
+          missing.push(file);
         }
       }
-      if (found) {
-        log(`  ✅ suites/${name} - 已部署`);
-      } else {
-        log(`  ❌ suites/${name} - 未部署`);
-      }
+    }
+
+    if (deployed > 0 && missing.length === 0) {
+      log(`  ✅ suites/${name} - 已部署`);
+    } else if (deployed > 0) {
+      log(`  ⚠️  suites/${name} - 部分部署 (缺失: ${missing.join(", ")})`);
+    } else {
+      log(`  ❌ suites/${name} - 未部署`);
     }
   }
 
@@ -640,114 +642,6 @@ function cmdRemove(args) {
     }
     success(`卸载完成: ${name}`);
   }
-}
-
-function cmdSetup(args) {
-  const useEnv = args.includes("--env");
-
-  const settingsDir = path.join(ROOT, "settings");
-  const templatePath = path.join(settingsDir, "settings.template.json");
-  const settingsPath = path.join(settingsDir, "settings.json");
-  const claudeSettingsPath = path.join(HOME, ".claude", "settings.json");
-
-  // 创建 settings 目录
-  if (!fs.existsSync(settingsDir)) {
-    fs.mkdirSync(settingsDir, { recursive: true });
-  }
-
-  // 拷贝模板
-  if (fs.existsSync(templatePath) && !fs.existsSync(settingsPath)) {
-    fs.copyFileSync(templatePath, settingsPath);
-    log(`📄 已创建: ${settingsPath}`);
-  }
-
-  // 获取 API Key
-  let apiKey = "";
-  if (useEnv) {
-    apiKey = process.env.CLAUDE_API_KEY || "";
-    if (!apiKey) {
-      log("⚠️  环境变量 CLAUDE_API_KEY 未设置");
-    } else {
-      log("🔑 从环境变量读取 API Key");
-    }
-  } else {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-
-    apiKey = awaitQuestion(rl, "请输入 Claude API Key (或留空跳过): ");
-    rl.close();
-  }
-
-  // 写入 ~/.claude/settings.json
-  if (apiKey) {
-    let claudeSettings = {};
-    if (fs.existsSync(claudeSettingsPath)) {
-      try {
-        claudeSettings = JSON.parse(
-          fs.readFileSync(claudeSettingsPath, "utf-8"),
-        );
-      } catch (e) {
-        // ignore
-      }
-    }
-    claudeSettings.api_key = apiKey;
-    const dir = path.dirname(claudeSettingsPath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(
-      claudeSettingsPath,
-      JSON.stringify(claudeSettings, null, 2),
-    );
-    success(`API Key 已写入: ${claudeSettingsPath}`);
-  }
-
-  // 列出 profiles
-  const profilesDir = path.join(settingsDir, "profiles");
-  if (fs.existsSync(profilesDir)) {
-    const profiles = fs
-      .readdirSync(profilesDir)
-      .filter((f) => f.endsWith(".json") && f !== "_base.json")
-      .map((f) => f.replace(".json", ""));
-    if (profiles.length > 0) {
-      log("");
-      log("可用 profiles:");
-      for (const p of profiles) {
-        log(`  - ${p}`);
-      }
-      log("");
-      info("使用 lab switch <profile> 切换");
-    }
-  }
-
-  // VSCode 配置
-  const vscodeSettingsPath = getVSCodeSettingsPath();
-  const vscodeSource = path.join(settingsDir, "vscode", "settings.json");
-  if (fs.existsSync(vscodeSource)) {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-    const answer = awaitQuestion(
-      rl,
-      `是否部署 VSCode 配置到 ${vscodeSettingsPath}? (y/N): `,
-    );
-    rl.close();
-    if (answer.toLowerCase() === "y") {
-      const dir = path.dirname(vscodeSettingsPath);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      fs.copyFileSync(vscodeSource, vscodeSettingsPath);
-      success(`VSCode 配置已部署`);
-    }
-  }
-
-  success("设置完成");
-}
-
-function awaitQuestion(rl, prompt) {
-  return new Promise((resolve) => {
-    rl.question(prompt, resolve);
-  });
 }
 
 // ANTHROPIC_AUTH_TOKEN 占位符值：仓库中的 token 仅为占位，不得写入用户配置
@@ -931,8 +825,6 @@ function showHelp() {
   lab switch              列出可用 profiles
   lab switch <profile>    切换模型配置
   lab switch <profile> --ephemeral  临时切换
-  lab setup               交互式配置
-  lab setup --env         从环境变量读取 API Key
 
 示例:
   lab deploy skill-forge
@@ -945,6 +837,16 @@ function showHelp() {
 
 function main() {
   try {
+    // npm run 兼容：npm 不把 `--` 前的 --flag 传给脚本，而是注入 npm_config_<flag>
+    // 环境变量（如 npm run lab:deploy --all → npm_config_all="true"）；位置参数则直接透传。
+    // 故从环境变量恢复 --all，保证 `npm run lab:deploy --all` 无需 `--` 分隔符即可生效。
+    if (
+      process.env.npm_config_all === "true" &&
+      !process.argv.includes("--all")
+    ) {
+      process.argv.push("--all");
+    }
+
     const args = process.argv.slice(2);
     const cmd = args[0];
 
@@ -967,9 +869,6 @@ function main() {
         break;
       case "remove":
         cmdRemove(subArgs);
-        break;
-      case "setup":
-        cmdSetup(subArgs);
         break;
       case "switch":
         cmdSwitch(subArgs);

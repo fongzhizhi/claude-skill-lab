@@ -25,8 +25,7 @@
 8. [部署逻辑详解](#部署逻辑详解)
 9. [映射表与 manifest.json](#映射表与-manifestjson)
 10. [跨平台路径处理](#跨平台路径处理)
-11. [与 claude-env 的整合计划](#与-claude-env-的整合计划)
-12. [安全与 .gitignore](#安全与-gitignore)
+11. [安全与 .gitignore](#安全与-gitignore)
 
 ---
 
@@ -318,7 +317,7 @@ settings/
 
 ### 设计原则
 
-1. **模板与实际分离**：`settings.template.json` 入仓（含占位符），`settings.json` 不入仓（`.gitignore`），由 `lab setup` 拷贝模板并填充真实 Key。
+1. **模板与实际分离**：`settings.template.json` 入仓（含占位符），`settings.json` 不入仓（`.gitignore`），由手动拷贝模板并填充真实 Key。
 2. **`settings/` 即 `~/.claude/` 的镜像**：除 `vscode/` 子目录外，其余文件直接复制到 `~/.claude/` 对应位置。
 3. **多模型配置用"基座 + 差异"**：`_base.json` 存公共配置，各模型文件只放差异字段。
 4. **`CLAUDE.md` 优先级**：全局 `~/.claude/CLAUDE.md` 与项目级 `./CLAUDE.md` 合并，项目级配置优先。
@@ -338,7 +337,7 @@ settings/
 | ---------------------------- | ------------------------------------------------- |
 | profile 中明确指定 `api_key` | 覆盖本地已有值                                    |
 | profile 中未指定 `api_key`   | 保留本地已有值                                    |
-| 首次部署，本地无 Key         | 使用 profile 中的值，若为空则提示运行 `lab setup` |
+| 首次部署，本地无 Key         | 使用 profile 中的值，若为空则手动补充 `api_key` |
 
 **Ephemeral 模式**：`--ephemeral` 参数不修改磁盘文件，合并在内存中完成，仅对当前会话生效。
 
@@ -375,8 +374,6 @@ CLI 只做四件事：**部署模块**、**管理配置**、**信息查询**、*
 | `lab switch <profile>`             | 切换模型配置                             |
 | `lab switch <profile> --ephemeral` | 仅当前会话生效                           |
 | `lab remove [<type>/]<name>`       | 从 `~/.claude/` 中卸载已部署的模块或套件 |
-| `lab setup`                        | 交互式配置 API Key，选择默认 profile     |
-| `lab setup --env`                  | 从环境变量 `CLAUDE_API_KEY` 读取         |
 
 ### 类型自动推断（冲突报错）
 
@@ -396,20 +393,6 @@ lab deploy suites/openspec    # 显式部署套件
 4. 若**无匹配** → 报错提示
 
 > 不采用固定顺序查找，避免未来类型增多时产生隐式优先级导致误部署。
-
-### lab setup
-
-交互式流程：
-
-1. 检查 `settings/settings.template.json` 是否存在，若存在则拷贝为 `settings/settings.json`
-2. 检查 `~/.claude/settings.json` 是否存在，若存在询问是否覆盖
-3. 交互式输入 API Key，或从 `--env` 读取
-4. 写入 `~/.claude/settings.json` 的 `api_key` 字段
-5. 列出可用 profiles，询问选择默认项
-6. 调用 `lab switch <选中的profile>` 完成首次配置
-7. 询问是否部署 VSCode 配置
-8. 询问是否创建初始 `CLAUDE.md`
-
 ### 执行约定
 
 - 所有命令在项目根目录执行
@@ -544,19 +527,6 @@ lab deploy suites/openspec    # 显式部署套件
 
 ---
 
-## 与 claude-env 的整合计划
-
-| claude-env 位置          | 迁入后位置                                    |
-| ------------------------ | --------------------------------------------- |
-| `profiles/deepseek.json` | `settings/profiles/deepseek.json`             |
-| `profiles/zhipu.json`    | `settings/profiles/zhipu.json`                |
-| `profiles/company.json`  | `settings/profiles/company.json`              |
-| `settings.json`          | `settings/settings.template.json`（占位符化） |
-| `vscode-settings.json`   | `settings/vscode/settings.json`               |
-| `CLAUDE.md`              | `settings/CLAUDE.md`                          |
-
----
-
 ## 安全与 .gitignore
 
 ```gitignore
@@ -566,7 +536,7 @@ settings/settings.json
 node_modules/
 ```
 
-`settings/settings.template.json` 入仓，含占位符（`YOUR_API_KEY_HERE`）。`lab setup` 拷贝模板生成 `settings/settings.json` 并填充真实值。
+`settings/settings.template.json` 入仓，含占位符（`YOUR_API_KEY_HERE`）。手动拷贝模板生成 `settings/settings.json` 并填充真实值。
 
 ---
 

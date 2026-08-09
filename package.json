@@ -12,7 +12,6 @@
     "lab:status": "node cli/lab.js status",
     "lab:deploy": "node cli/lab.js deploy",
     "lab:remove": "node cli/lab.js remove",
-    "lab:setup": "node cli/lab.js setup",
     "lab:switch": "node cli/lab.js switch"
   },
   "engines": {
