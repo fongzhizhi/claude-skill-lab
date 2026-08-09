@@ -1,7 +1,7 @@
 {
   "model": "deepseek-v4-flash",
   "env": {
-    "ANTHROPIC_BASE_URL": "BASE_URL",
+    "ANTHROPIC_BASE_URL": "https://claude.jlcops.com/api/",
     "ANTHROPIC_AUTH_TOKEN": "API_KEY",
     "ANTHROPIC_MODEL": "deepseek-v4-flash",
     "ANTHROPIC_DEFAULT_OPUS_MODEL": "glm-5.2",
