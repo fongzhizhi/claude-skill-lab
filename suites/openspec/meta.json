@@ -1,0 +1,10 @@
+{
+  "dependencies": [
+    {
+      "name": "openspec CLI",
+      "check": "openspec --version",
+      "install": "npm install -g @fission-ai/openspec@latest",
+      "required": true
+    }
+  ]
+}

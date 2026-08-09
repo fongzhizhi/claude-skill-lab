@@ -102,23 +102,23 @@ npm run lab:switch deepseek  # 切换到 deepseek
 
 `skill-forge` 会自动更新文档、修改成品文件并提示重新部署。整个过程无需手动编辑任何 markdown 文件。
 
-## 命令参考
+## 指令参考
 
-| 命令                                       | 说明                             |
-| ------------------------------------------ | -------------------------------- |
-| `npm run lab`                              | 显示帮助                         |
-| `npm run lab:list`                         | 列出所有可部署模块（含套件）     |
-| `npm run lab:status`                       | 显示本地部署状态                 |
-| `npm run lab:deploy <name>`                | 部署（类型自动推断）             |
-| `npm run lab:deploy <type>/<name>`         | 同名冲突时显式限定               |
-| `npm run lab:deploy suites/<name>`         | 部署聚合套件                     |
-| `npm run lab:deploy --all`                 | 一键部署所有模块                 |
-| `npm run lab:remove <name>`                | 卸载已部署模块                   |
-| `npm run lab:switch`                       | 列出可用 profiles                |
-| `npm run lab:switch <profile>`             | 切换模型配置                     |
-| `npm run lab:switch <profile> --ephemeral` | 仅当前会话生效                   |
-| `npm run lab:setup`                        | 交互式配置 API Key               |
-| `npm run lab:setup --env`                  | 从环境变量 `CLAUDE_API_KEY` 读取 |
+| 命令                               | 说明                             |
+| ---------------------------------- | -------------------------------- |
+| `lab`                              | 显示帮助                         |
+| `lab:list`                         | 列出所有可部署模块（含套件）     |
+| `lab:status`                       | 显示本地部署状态                 |
+| `lab:deploy <name>`                | 部署（类型自动推断）             |
+| `lab:deploy <type>/<name>`         | 同名冲突时显式限定               |
+| `lab:deploy suites/<name>`         | 部署聚合套件                     |
+| `lab:deploy --all`                 | 一键部署所有模块                 |
+| `lab:remove <name>`                | 卸载已部署模块                   |
+| `lab:switch`                       | 列出可用 profiles                |
+| `lab:switch <profile>`             | 切换模型配置                     |
+| `lab:switch <profile> --ephemeral` | 仅当前会话生效                   |
+| `lab:setup`                        | 交互式配置 API Key               |
+| `lab:setup --env`                  | 从环境变量 `CLAUDE_API_KEY` 读取 |
 
 > 也可直接调用 `node cli/lab.js`。
 
@@ -126,12 +126,12 @@ npm run lab:switch deepseek  # 切换到 deepseek
 
 ### ✅ 已部署可用
 
-| 模块                                                | 类型     | 说明                                                         |
-| --------------------------------------------------- | -------- | ------------------------------------------------------------ |
-| **[skill-forge](skills/skill-forge/README.md)**     | skill    | 创建、维护、迭代所有模块（单模块 + 聚合套件）                |
-| **[commit-draft](commands/commit-draft/README.md)** | command  | 基于暂存区生成 Conventional Commits 规范的 commit message    |
+| 模块                                                | 类型     | 说明                                                                   |
+| --------------------------------------------------- | -------- | ---------------------------------------------------------------------- |
+| **[skill-forge](skills/skill-forge/README.md)**     | skill    | 创建、维护、迭代所有模块（单模块 + 聚合套件）                          |
+| **[commit-draft](commands/commit-draft/README.md)** | command  | 基于暂存区生成 Conventional Commits 规范的 commit message              |
 | **[openspec](suites/openspec/README.md)**           | suite    | 6 个 `/opsx:*` 斜杠命令，用于规范驱动开发（需全局安装 `openspec` CLI） |
-| **[settings](settings/README.md)**                  | settings | 多模型切换（`_base.json` + profiles 合并），VSCode 配置部署  |
+| **[settings](settings/README.md)**                  | settings | 多模型切换（`_base.json` + profiles 合并），VSCode 配置部署            |
 
 ### 🔴 规划中
 

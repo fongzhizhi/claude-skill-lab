@@ -39,6 +39,7 @@ commands/commit-draft/
 ├── design.md       # 设计决策、使用场景、边界条件
 ├── CHANGELOG.md    # 初始版本 v0.1.0
 ├── feedback.md     # 占位，后续记录反馈
+├── meta.json       # 可选：声明外部 CLI 前置依赖（无依赖则不创建）
 └── dist/           # 成品目录
     └── commit-draft.md  # 成品文件
 ```
@@ -47,7 +48,8 @@ commands/commit-draft/
    - 根据类型使用对应模板（如 command 的 frontmatter 含 `name`、`description`、`category`）。
    - 将用户描述转化为可执行的指令内容。
    - 设计文档记录设计理由、限制条件、测试用例。
-5. **输出结果**：向用户报告生成的文件列表，并提示 `lab deploy commit-draft` 进行部署测试。
+5. **按需生成 `meta.json`**：判断模块是否依赖外部 CLI（如 `gh`、`jq`、`openspec` 等）。依赖则生成 `meta.json`（含 `name`/`check`/`install`/`required` 字段），纯文本逻辑则跳过。
+6. **输出结果**：向用户报告生成的文件列表（含是否生成了 `meta.json`），并提示 `lab deploy commit-draft` 进行部署测试。
 
 ### 场景二：从零创建聚合套件
 
@@ -67,6 +69,7 @@ suites/data-tools/
 ├── CHANGELOG.md     # 套件级版本历史
 ├── feedback.md      # 套件级反馈
 ├── manifest.json    # 部署清单
+├── meta.json        # 可选：声明外部 CLI 前置依赖（无依赖则不创建）
 └── dist/            # 成品目录
     └── commands/
         └── data-tools/
@@ -93,7 +96,8 @@ suites/data-tools/
 ```
 
 5. **填充每个命令的模板**。
-6. **输出结果**：告知用户套件已创建，提示 `lab deploy data-tools` 或 `lab deploy suites/data-tools` 部署。
+6. **按需生成 `meta.json`**：任一子模块依赖外部 CLI 时，生成套件级 `meta.json` 声明前置依赖。
+7. **输出结果**：告知用户套件已创建，提示 `lab deploy data-tools` 或 `lab deploy suites/data-tools` 部署。
 
 ### 场景三：迭代现有模块（单模块或套件）
 
@@ -140,12 +144,13 @@ suites/data-tools/
 `skill-forge` 执行步骤：
 
 1. **扫描目录**：检查是否存在 `dist/` 及成品文件，识别类型。
-2. **补全文档**：
+2. **检查 `meta.json`**：已有则核对依赖声明与成品文件是否一致；缺失则按"依赖判断规则"决定是否生成（依赖外部 CLI 则生成，纯文本逻辑则跳过）。
+3. **补全文档**：
    - 生成 `README.md`（基于成品文件内容提取摘要）。
    - 生成初始 `design.md`（记录"外部导入"及基础信息）。
    - 生成 `CHANGELOG.md`（基线版本）。
    - 生成 `feedback.md`（空白）。
-3. **提示用户**：说明已补全文档，后续迭代可按场景三进行。
+4. **提示用户**：说明已补全文档，后续迭代可按场景三进行。
 
 ### 场景六：接管外部导入的聚合套件
 
@@ -160,8 +165,9 @@ suites/data-tools/
 
 1. **扫描目录**：检查 `dist/` 结构，推断文件类型和映射关系。
 2. **生成 manifest.json**：根据 `dist/` 下的文件结构自动生成映射规则。
-3. **补全文档**：生成 README、design、CHANGELOG、feedback。
-4. **提示用户**：确认生成的 `manifest.json` 是否需要调整，然后可正常部署和迭代。
+3. **检查 `meta.json`**：已有则核对，缺失则按"依赖判断规则"决定是否生成。
+4. **补全文档**：生成 README、design、CHANGELOG、feedback。
+5. **提示用户**：确认生成的 `manifest.json` 与 `meta.json` 是否需要调整，然后可正常部署和迭代。
 
 ## 类型判断规则
 
@@ -173,6 +179,18 @@ suites/data-tools/
 | "创建一套工具"、"一组命令"、"多个"          | 聚合套件     |
 | 明确指定路径如 `skills/xxx` 或 `suites/xxx` | 根据路径判断 |
 | 不确定时                                    | 主动询问用户 |
+
+## 依赖判断规则
+
+`meta.json` 用于声明模块的前置依赖，`lab deploy` 会检测并拦截缺失的必装依赖。生成与否的判断：
+
+| 情况 | 处理 |
+| ---- | ---- |
+| 模块实现需要调用外部 CLI（如 `gh`、`jq`、`openspec`、`kubectl`） | 生成 `meta.json`，逐一声明依赖 |
+| 纯文本 / 对话逻辑，无外部工具依赖 | 不生成 `meta.json` |
+| 不确定依赖是否需要声明 | 询问用户 |
+
+`meta.json` 字段：`name`（显示名）、`check`（检测命令，exit code 0 即已安装）、`install`（安装指引）、`required`（默认 `true`，`false` 时只警告不拦截）。迭代模块时若成品文件新增/移除了外部工具调用，需同步增删 `meta.json` 条目。
 
 ## 文件操作规范
 
@@ -231,6 +249,21 @@ category: { 自动推断或用户指定 }
 }
 ```
 
+**模块 meta.json**（单模块与套件共用）：
+
+```json
+{
+  "dependencies": [
+    {
+      "name": "{依赖名称}",
+      "check": "{检测命令}",
+      "install": "{安装命令}",
+      "required": true
+    }
+  ]
+}
+```
+
 **套件 README.md**：
 
 ````markdown
@@ -250,14 +283,13 @@ lab deploy {name}
 ```
 ````
 
-```
-
 ## 与 lab 的边界
 
 | skill-forge 负责 | lab 负责 |
 |---------------------|------------|
 | 生成/修改仓库内的模块文件（含 `dist/`） | 将 `dist/` 内容复制到 `~/.claude/` |
 | 生成/修改套件的 `manifest.json` | 读取 `manifest.json` 执行映射部署 |
+| 按需生成/维护模块的 `meta.json` | 读取 `meta.json` 检测前置依赖，缺失时拦截部署 |
 | 维护模块的文档（design/CHANGELOG/feedback） | 部署、切换配置、列表状态 |
 | 识别导入的外部模块并补全文档 | 类型推断、冲突解决、卸载 |
 
@@ -273,4 +305,3 @@ lab deploy {name}
 - 不执行任意代码，只生成文本文件。
 - 不访问 `~/.claude/` 或系统敏感目录。
 - 所有修改仅限仓库目录，建议用户将仓库纳入版本控制以便回滚。
-```

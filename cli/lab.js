@@ -3,6 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const { execSync } = require("child_process");
 
 // ============================================
 // 配置
@@ -198,6 +199,48 @@ function resolveModule(name) {
   error(`模块 "${name}" 不存在`);
 }
 
+// 读取模块目录下的 meta.json（声明前置依赖等元信息），无效或不存在时返回 null
+function readMeta(modulePath) {
+  const metaPath = path.join(modulePath, "meta.json");
+  if (!fs.existsSync(metaPath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(metaPath, "utf-8"));
+  } catch (e) {
+    return null;
+  }
+}
+
+// 逐个执行 meta.json 中声明的依赖检查命令，返回是否全部满足；
+// required === false 的依赖只提示不拦截
+function checkDependencies(modulePath) {
+  const meta = readMeta(modulePath);
+  if (!meta) {
+    log("⚠️  meta.json 格式无效，跳过依赖检查");
+    return true;
+  }
+
+  const deps = meta.dependencies || [];
+  let allOk = true;
+
+  for (const dep of deps) {
+    if (!dep.check) continue;
+    try {
+      execSync(dep.check, { stdio: "pipe", shell: true });
+      log(`  ✅ ${dep.name} 已安装`);
+    } catch (e) {
+      log(`  ❌ ${dep.name} 未安装`);
+      if (dep.required !== false) {
+        allOk = false;
+        log(`  📦 安装命令: ${dep.install || "请手动安装"}`);
+      } else {
+        log(`  ⚠️  （可选依赖，仅提示）`);
+      }
+    }
+  }
+
+  return allOk;
+}
+
 function deploySingleModule(type, name, modulePath) {
   const distPath = path.join(modulePath, "dist");
   if (!fs.existsSync(distPath)) {
@@ -324,7 +367,7 @@ function deploySuite(name, suitePath) {
 }
 
 // 一键部署所有模块（单模块 + 套件），逐个捕获失败，返回汇总
-function deployAllModules() {
+function deployAllModules(force = false) {
   const modules = findModules();
   let ok = 0;
   const fail = [];
@@ -349,6 +392,19 @@ function deployAllModules() {
   const suiteNames = Object.keys(modules.suites).sort();
   for (const name of suiteNames) {
     try {
+      // 依赖检查：缺失时跳过该套件（--force 可跳过检查）
+      const meta = readMeta(modules.suites[name]);
+      const deps = meta?.dependencies || [];
+      if (deps.length > 0) {
+        log(`🔍 检查前置依赖: suites/${name}`);
+        if (!force && !checkDependencies(modules.suites[name])) {
+          fail.push(`suites/${name}: 缺失前置依赖，已跳过（--force 可强制部署）`);
+          continue;
+        }
+        if (force) {
+          log(`  ⚠️  --force 已启用，跳过依赖检查`);
+        }
+      }
       deploySuite(name, modules.suites[name]);
       ok++;
     } catch (e) {
@@ -364,14 +420,17 @@ function deployAllModules() {
 // ============================================
 
 function cmdDeploy(args) {
-  // 解析参数：--all 一键部署；--switch <profile> / --switch=<profile> 部署后切换配置
+  // 解析参数：--all 一键部署；--force 跳过依赖检查；--switch <profile> / --switch=<profile> 部署后切换配置
   let all = false;
+  let force = false;
   let switchProfile = null;
   const names = [];
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "--all") {
       all = true;
+    } else if (a === "--force") {
+      force = true;
     } else if (a === "--switch") {
       switchProfile = args[++i];
       if (!switchProfile || switchProfile.startsWith("-")) {
@@ -388,7 +447,7 @@ function cmdDeploy(args) {
 
   // 一键部署
   if (all) {
-    const { ok, fail } = deployAllModules();
+    const { ok, fail } = deployAllModules(force);
     log("");
     if (fail.length > 0) {
       log(`⚠️  成功 ${ok} 个，失败 ${fail.length} 个:`);
@@ -415,6 +474,23 @@ function cmdDeploy(args) {
 
   const name = names[0];
   const result = resolveModule(name);
+
+  // 前置依赖检查：meta.json 中声明了 dependencies 时，缺失且未加 --force 则拦截
+  const meta = readMeta(result.path);
+  const deps = meta?.dependencies || [];
+  if (deps.length > 0) {
+    if (force) {
+      log(`⚠️  --force 已启用，跳过依赖检查`);
+    } else {
+      log(`🔍 检查前置依赖: ${name}`);
+      if (!checkDependencies(result.path)) {
+        log("");
+        log("⚠️  缺失前置依赖，部署已暂停");
+        log("   请安装后重新执行，或使用 --force 跳过检查");
+        process.exit(1);
+      }
+    }
+  }
 
   if (result.type === "suite") {
     deploySuite(result.name, result.path);
@@ -450,7 +526,23 @@ function cmdList() {
     log("");
     log("聚合套件:");
     for (const name of suiteNames) {
-      log(`  ${name} (suites)`, 1);
+      const meta = readMeta(modules.suites[name]);
+      const deps = meta?.dependencies || [];
+      let depStatus = "";
+      if (deps.length > 0) {
+        const missing = [];
+        for (const dep of deps) {
+          if (!dep.check) continue;
+          try {
+            execSync(dep.check, { stdio: "pipe", shell: true });
+          } catch (e) {
+            missing.push(dep.name);
+          }
+        }
+        depStatus =
+          missing.length === 0 ? "✅" : `⚠️ 缺少 ${missing.join(", ")}`;
+      }
+      log(`  ${name} (suites)${depStatus ? " " + depStatus : ""}`, 1);
     }
   }
 
@@ -845,6 +937,13 @@ function main() {
       !process.argv.includes("--all")
     ) {
       process.argv.push("--all");
+    }
+    // --force 同理：npm run 会将其消费为 npm 自身配置，从环境变量恢复
+    if (
+      process.env.npm_config_force === "true" &&
+      !process.argv.includes("--force")
+    ) {
+      process.argv.push("--force");
     }
 
     const args = process.argv.slice(2);
