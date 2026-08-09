@@ -1,3 +1,54 @@
 {
-  "model": ""
+  "model": "anthropic",
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
+    "ANTHROPIC_AUTH_TOKEN": "API_KEY",
+    "ANTHROPIC_MODEL": "MODEL",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "OPUS_MODEL",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "SONNET_MODEL",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "HAIKU_MODEL",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "SUBAGENT_MODEL",
+    "CLAUDE_CODE_EFFORT_LEVEL": "max",
+    "DISABLE_INSTALLATION_CHECKS": "1",
+    "MAX_THINKING_TOKENS": "16000",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "70"
+  },
+  "cleanupPeriodDays": 60,
+  "language": "zh-CN",
+  "autoUpdatesChannel": "stable",
+  "theme": "dark-ansi",
+  "showTurnDuration": true,
+  "spinnerTipsEnabled": false,
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash",
+      "Read",
+      "Write",
+      "Edit",
+      "MultiEdit",
+      "Grep",
+      "Find",
+      "Glob",
+      "LSP",
+      "NotebookEdit",
+      "Task",
+      "TodoWrite",
+      "ExitPlanMode",
+      "mcp__*"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(chmod *)",
+      "Bash(chown *)",
+      "Bash(dd *)",
+      "Bash(mkfs.*)",
+      "Bash(:(){ :|:& };:)",
+      "Edit(**/*.secret.*)",
+      "Write(**/*.secret.*)",
+      "Write(**/.env)",
+      "Write(**/id_rsa*)"
+    ]
+  }
 }
