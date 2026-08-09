@@ -1,0 +1,6 @@
+# 实际配置（含真实 API Key，不入仓；由 lab setup 从模板生成）
+settings/settings.json
+
+node_modules/
+*.log
+.DS_Store

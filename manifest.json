@@ -1,0 +1,39 @@
+{
+  "types": {
+    "skills": {
+      "target": "{HOME}/.claude/skills/",
+      "pattern": "skills/*/dist/*"
+    },
+    "agents": {
+      "target": "{HOME}/.claude/agents/",
+      "pattern": "agents/*/dist/*"
+    },
+    "commands": {
+      "target": "{HOME}/.claude/commands/",
+      "pattern": "commands/*/dist/*"
+    },
+    "rules": {
+      "target": "{HOME}/.claude/rules/",
+      "pattern": "rules/*/dist/*"
+    },
+    "hooks": {
+      "target": "{HOME}/.claude/hooks/",
+      "pattern": "hooks/*/dist/*"
+    },
+    "workflows": {
+      "target": "{HOME}/.claude/workflows/",
+      "pattern": "workflows/*/dist/*"
+    }
+  },
+  "settings": {
+    "files": {
+      "settings.json": "{HOME}/.claude/settings.json",
+      "CLAUDE.md": "{HOME}/.claude/CLAUDE.md",
+      "profiles/*.json": "{HOME}/.claude/profiles/",
+      "vscode/settings.json": "{VSCodeSettings}"
+    }
+  },
+  "suites": {
+    "path": "suites/"
+  }
+}

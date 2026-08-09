@@ -1,0 +1,15 @@
+{
+  "name": "claude-skill-lab",
+  "version": "0.1.0",
+  "description": "Claude Code 扩展能力的个人研发工作台 —— 锻造 skill / agent / command / rule / hook / workflow，一键部署到本地",
+  "license": "MIT",
+  "bin": {
+    "lab": "cli/lab.js"
+  },
+  "scripts": {
+    "lab": "node cli/lab.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
