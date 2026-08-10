@@ -45,16 +45,20 @@
 | scope  | 可选，受影响的模块或文件范围                                       |
 | subject | 动词开头、不超过 50 字符、结尾不加句号                              |
 | body   | 说明做了什么 + 为什么，简洁分段，避免罗列代码细节                  |
-| footer | `Refs: <需求/bug 链接>`，仅在有真实来源时添加                      |
+| footer | `Refs: <链接或编号>`；ONES 单为 `Title: <ID> <标题>`（git trailer，便于按单号检索）+ `Refs: <纯链接>`，Title 在上、Refs 在下 |
 
 ## 边界条件
 
 - 暂存区与工作区均无变更：告知用户无可提交内容。
 - 参数携带需求链接：作为 footer `Refs` 引用。
 - 会话中有需求 ID / ticket 编号：同样汇总到 footer，方便溯源。
+- 来源为 ONES 单：按"ONES 单解析规则"解析出 ID / 标题 / 链接，footer 输出 `Refs` + `Title` 两行；解析不到标题时只保留 `Refs` 行，不编造。
+- 非 ONES 链接（普通 ticket / issue）：保持原有 `Refs: <链接或编号>` 单行，不追加 `Title:`。
 
 ## 变更理由
 
+- **v0.1.4**：实测反馈 footer 顺序与内容不佳——`Title:` 应是第一行（更符合阅读习惯），`Refs:` 只留纯链接即可（单 ID 已在 `Title:` 行，重复拼写无意义）。调整顺序与格式。
+- **v0.1.3**：会话/参数中的 ONES 单在 footer 仅输出 `Refs: <链接>`，无法按单号检索提交。新增 ONES 单解析规则（与 ones-parser 保持一致）与 `Title: <ID> <标题>` footer（git trailer 格式，`git log --grep=<单号>` 可命中）；非 ONES 链接保持原样，保证 commit-draft 的通用性。
 - **v0.1.2**：中文场景下偶发输出 U+FFFD 乱码。根因是 Windows 下 GBK 编码文件被按 UTF-8 读取时产生替换字符，模型将其复述进 commit。在信息收集阶段提示识别乱码来源，并新增"输出自检"流程（检查 → 排查 → 重写 → 复检），保证输出内容无乱码。
 - **v0.1.1**：README 结构偏简单（缺少前置依赖与使用说明），按统一模块 README 规范（简介 / 功能 / 前置依赖 / 部署 / 使用，参照 openspec）完善，明确"无外部依赖"与单代码块输出方式。
 - **v0.1.0**：初始设计。参考 README 中"commands `commit-draft`（commit message 生成）"规划项落地。

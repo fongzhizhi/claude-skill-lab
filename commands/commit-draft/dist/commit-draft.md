@@ -20,10 +20,21 @@ category: git
 
 - 从当前会话中提取与本次改动相关的信息：正在写的需求、修的 bug、改动涉及的文件与说明。
 - 会话中提到的需求 ID、bug 编号、ticket 链接等，作为补充信息加入 commit（便于溯源）。
+- 会话中出现 ONES 单粘贴内容（如 `PRO-156328 【需求测试】... http://ones.xxx.com/project/#/team/xxx/issue/PRO-156328`）时，按下方"ONES 单解析规则"解析出单 ID / 类型 / 标题 / 链接，写入 footer。
 
 **第 3 优先级 —— 命令参数**
 
 - 用户执行 `/commit-draft` 时附带的参数（如需求链接、相关说明），原样作为参考信息加入 commit。
+- 参数中的 ONES 单同样按"ONES 单解析规则"解析并写入 footer。
+
+## ONES 单解析规则
+
+ONES 工单的解析规则与 `ones-parser` 技能保持一致：
+
+- **以链接为锚点**：从链接 hash 末尾提取正式单 ID（`PRO-156328`、`WIKI-2048`）；`#/team/<TeamId>` 中的 base62 团队标识是冗余信息，不是单号。
+- **ID 前缀 → 单类型**：PRO=需求、WIKI=文档、TASK=任务、BUG=缺陷、SUBTASK=子任务；未知前缀不臆测。
+- **标题提取**：单行格式取 ID 与链接之间的文本；两行格式取 ID 行去掉前缀后的部分；Markdown 链接取 `[...]` 内文本。
+- **不编造**：解析不到标题则留空；ID 与链接冲突时以链接为准。
 
 ## 格式要求
 
@@ -42,13 +53,23 @@ category: git
 - **subject**：动词开头、不超过 50 字符、结尾不加句号，概括本次改动。
 - **body**：说明"做了什么 + 为什么"，简洁分段，不要罗列代码细节。
 - **footer**：存在需求/bug 来源时追加 `Refs: <链接或编号>`，如 `Refs: #123`、`Refs: https://example.com/ticket/123`。
+- **footer（ONES 单）**：来源为 ONES 单时，每单输出两行，`Title:` 在上、`Refs:` 在下（`Title:` 为 git trailer 格式，便于 `git log --grep=<单号>` 检索）：
+
+  ```text
+  Title: PRO-156328 【需求测试】切换到自定义单还未选择参考点的模式下，在左侧区域按钮没有置灰
+  Refs: http://ones.xxx.com/project/#/team/xxx/issue/PRO-156328
+  ```
+
+  - `Refs:` 只输出纯链接，不拼单 ID（单 ID 已由 `Title:` 行体现）。
+  - 解析不到标题时只保留 `Refs:` 纯链接行，不编造标题。
+  - 多个 ONES 单逐单追加 `{Title, Refs}` 对。
 
 ## 输出要求
 
 - **只输出一个代码块**，内容为完整的 commit message（含 subject、body、footer），方便直接复制。
 - 代码块内不要写 git 命令（不要 `git commit` 等）。
 - 语言风格跟随仓库现有提交（本仓库默认中文）。
-- **不编造引用**：footer 中的链接/编号必须来自会话或参数中真实提供的信息。
+- **不编造引用**：footer 中的链接/编号必须来自会话或参数中真实提供的信息；`Title:` 行只写解析出的真实标题，解析不到则不写。
 - 若暂存区与工作区均无变更，直接告知用户"没有可提交的变更"，不生成 commit message。
 
 ## 输出自检（防乱码）
