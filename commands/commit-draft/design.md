@@ -54,4 +54,5 @@
 
 ## 变更理由
 
+- **v0.1.1**：README 结构偏简单（缺少前置依赖与使用说明），按统一模块 README 规范（简介 / 功能 / 前置依赖 / 部署 / 使用，参照 openspec）完善，明确"无外部依赖"与单代码块输出方式。
 - **v0.1.0**：初始设计。参考 README 中"commands `commit-draft`（commit message 生成）"规划项落地。
