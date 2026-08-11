@@ -14,7 +14,7 @@
  │ skills/<n>/dist/            │ ──────────▶ │ ~/.claude/（镜像复制）     │
  │ commands/<n>/dist/          │ ──────────▶ │   dist/ 相对路径原样落位   │
  │ agents/ · rules/ · hooks/   │ ──────────▶ │   如 commands/foo.md →     │
- │ workflows/<n>/dist/         │ ──────────▶ │   ~/.claude/commands/foo.md│
+ │ workflows/ · docs/<n>/dist/ │ ──────────▶ │   ~/.claude/commands/foo.md│
  │ suites/<n>/dist/            │ ──────────▶ │ 按 manifest.json 映射      │
  │ settings/                   │ ──────────▶ │ ~/.claude/ + VSCode       │
  └─────────────▲───────────────┘             └───────────┬───────────────┘
@@ -32,7 +32,7 @@
 | **单模块** | 单一类型、`dist/` 全量镜像、零配置 | 一个技能、一个斜杠命令 |
 | **聚合套件** | 多文件、可混合类型、`manifest.json` 声明映射 | OpenSpec 工具集、工作流系统 |
 
-> 目录结构、模块规范与部署细节见 [docs/design.md](docs/design.md)。
+> 目录结构、模块规范与部署细节见 [project-docs/design.md](project-docs/design.md)。
 
 ## 快速开始
 
@@ -85,15 +85,19 @@ npm run lab:switch deepseek       # 切换到 deepseek
 | --- | --- | --- |
 | **[skill-forge](skills/skill-forge/README.md)** | skill | 创建、维护、迭代所有模块（单模块 + 聚合套件） |
 | **[commit-draft](commands/commit-draft/README.md)** | command | 基于暂存区生成 Conventional Commits 规范的 commit message |
+| **[mojibake-fixer](commands/mojibake-fixer/README.md)** | command | 修复 AI 生成内容中的乱码（U+FFFD 等） |
+| **[session-review](commands/session-review/README.md)** | command | 生成技术复盘报告（背景、根因、方案、验证） |
 | **[ones-parser](skills/ones-parser/README.md)** | skill | 解析 ONES 平台复制的工单内容（ID / 标题 / 链接），作为 commit 引用的单一事实来源 |
 | **[openspec](suites/openspec/README.md)** | suite | 6 个 `/opsx:*` 斜杠命令，规范驱动开发（需全局安装 `openspec` CLI） |
+| **[ts-standards](rules/ts-standards/README.md)** | rules | 5 条 TS 主流必备规则（注释/风格/类型/错误处理/测试），路径作用域自动生效 |
+| **[ts-code-guide](docs/ts-code-guide/README.md)** | docs | TS 注释规范参考文档 → `~/.claude/docs/`，按需引用不占上下文 |
 | **[settings](settings/README.md)** | settings | 多模型切换（`_base.json` + profiles 合并），VSCode 配置部署 |
 
 ### 🔴 规划中
 
-技能类：`comment-keeper`（代码注释梳理）· `session-review`（技术复盘）· `live-debugger`（运行时调试）· `mojibake-fixer`（U+FFFD 乱码修复）· `quick-test`（快速测试加速器）
+技能类：`comment-keeper`（代码注释梳理）· `live-debugger`（运行时调试）· `quick-test`（快速测试加速器）
 
-类型目录：`rules/` · `hooks/` · `workflows/` · `agents/` 已预留，按需生长
+类型目录：`hooks/` · `workflows/` · `agents/` 已预留，按需生长
 
 > 不追求数量，只追求每个模块都真正好用。
 
@@ -111,6 +115,6 @@ npm run lab:switch deepseek       # 切换到 deepseek
 - [Claude Code 官方文档](https://code.claude.com/docs)
 - [Agent Skills 开放标准](https://agentskills.io)
 - [OpenSpec](https://github.com/Fission-AI/OpenSpec) —— 聚合套件参考案例
-- 设计文档：[docs/design.md](docs/design.md)（面向贡献者 / 进阶用户）
+- 设计文档：[project-docs/design.md](project-docs/design.md)（面向贡献者 / 进阶用户）
 
 _MIT License._

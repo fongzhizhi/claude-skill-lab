@@ -8,6 +8,7 @@
 
 | 版本 | 日期       | 变更说明                                                                                                                                                                 |
 | ---- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| v2.1 | 2026-08-11 | 新增 `docs/` 模块类型（参考文档 → `~/.claude/docs/`）；项目说明文档迁移至 `project-docs/`；新增 `rules/ts-standards` TS 规则模块（含 5 条规则与 docs 软依赖检查）。      |
 | v2.0 | 2026-08-09 | 新增聚合套件（`suites/`）支持；统一所有模块成品存放于 `dist/` 目录；重构部署逻辑支持单模块与套件两种模式；更新 `manifest.json` 结构；引入套件内部 `manifest.json` 规范。 |
 | v1.0 | 初始       | 原始设计，仅支持单模块（skills/agents/commands/rules/hooks/workflows），成品文件位于模块根目录。                                                                         |
 
@@ -82,10 +83,17 @@ claude-skill-lab/
 ├── README.md
 ├── package.json                 部署入口（npm scripts / bin → cli/lab.js）
 ├── manifest.json                顶层映射表（类型 → 目标路径、部署规则）
-├── docs/
-│   ├── design.md                ← 本文档
-│   ├── quickstart.md            端到端快速入门（待补充）
-│   └── examples/                使用样例（待补充）
+├── docs/                        单模块：参考文档 → ~/.claude/docs/
+│   └── <name>/
+│       ├── README.md            说明、状态（由 skill-forge 维护）
+│       ├── design.md            设计决策（由 skill-forge 维护）
+│       ├── CHANGELOG.md         迭代历史（由 skill-forge 维护）
+│       ├── feedback.md          问题清单（由 skill-forge 维护）
+│       └── dist/
+│           └── docs/
+│               └── <name>.md        成品（长参考文档，AI 按需 @ 读取，不自动加载）
+│
+├── project-docs/                ← 项目说明文档（design.md、quickstart.md、examples/）
 │
 ├── skills/                      单模块：技能 → ~/.claude/skills/
 │   └── <name>/
@@ -127,7 +135,7 @@ claude-skill-lab/
 │       ├── feedback.md
 │       └── dist/
 │           └── rules/
-│               └── <name>.mdc       成品
+│               └── <name>.md        成品
 │
 ├── hooks/                       单模块：Hook 脚本 → ~/.claude/hooks/
 │   └── <name>/
@@ -198,9 +206,10 @@ claude-skill-lab/
 | `skills/`    | `dist/skills/<name>/SKILL.md`    | `~/.claude/skills/<name>/`（整目录）|
 | `agents/`    | `dist/agents/<name>.md`          | `~/.claude/agents/<name>.md` |
 | `commands/`  | `dist/commands/<name>.md`        | `~/.claude/commands/<name>.md` |
-| `rules/`     | `dist/rules/<name>.mdc`          | `~/.claude/rules/<name>.mdc` |
+| `rules/`     | `dist/rules/<name>.md`           | `~/.claude/rules/<name>.md` |
 | `hooks/`     | `dist/hooks/<name>.js`           | `~/.claude/hooks/<name>.js` |
 | `workflows/` | `dist/workflows/<name>.js`       | `~/.claude/workflows/<name>.js` |
+| `docs/`      | `dist/docs/<name>.md`            | `~/.claude/docs/<name>.md` |
 
 > **重要**：`dist/` 是唯一被 `lab deploy` 关注的目录。部署时，`lab` 将 `dist/` 下的**所有内容**按相对路径递归复制到 `~/.claude/`（镜像复制）。因此，`dist/` 内可以自由放置额外的资源文件（如脚本、模板、图片等），无需修改 `lab` 代码；也可直接 `cp -r <module>/dist/* ~/.claude/` 验证部署。
 

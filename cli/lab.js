@@ -15,7 +15,7 @@ const HOME = os.homedir();
 // 类型目录（单模块）——单模块的 dist/ 是 ~/.claude/ 的**全量镜像**：
 // dist/ 下所有文件按相对路径原样复制到 ~/.claude/（如 dist/commands/foo.md →
 // ~/.claude/commands/foo.md），与聚合套件共用同一认知模型，lab 无需按类型特殊处理
-const TYPES = ["skills", "agents", "commands", "rules", "hooks", "workflows"];
+const TYPES = ["skills", "agents", "commands", "rules", "hooks", "workflows", "docs"];
 
 // ~/.claude/ 根：单模块 dist/ 即其全量镜像（隐式），套件经 manifest.json 声明映射子集
 const CLAUDE_ROOT = path.join(HOME, ".claude");

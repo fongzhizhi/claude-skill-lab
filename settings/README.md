@@ -1,7 +1,7 @@
 # settings —— 配置类模块
 
 > 本目录是 `~/.claude/` 的镜像（除 `vscode/` 子目录外），由 `lab deploy` / `lab switch` 部署。
-> 设计细节见 [`docs/design.md`](../docs/design.md)「Settings 配置设计」。
+> 设计细节见 [`project-docs/design.md`](../project-docs/design.md)「Settings 配置设计」。
 
 ## 设计原则
 

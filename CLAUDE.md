@@ -28,7 +28,7 @@ npm run lab:switch <profile>   # 切换模型配置（--ephemeral 仅当前会�
 
 | 形态 | 位置 | 部署方式 |
 | --- | --- | --- |
-| 单模块 | `skills/` `agents/` `commands/` `rules/` `hooks/` `workflows/` 下的 `<name>/` | `dist/` 全量镜像复制到 `~/.claude/` |
+| 单模块 | `skills/` `agents/` `commands/` `rules/` `hooks/` `workflows/` `docs/` 下的 `<name>/` | `dist/` 全量镜像复制到 `~/.claude/` |
 | 聚合套件 | `suites/<name>/` | 按套件内 `manifest.json` 的 `mappings` 映射 |
 
 每个模块目录统一结构（skill-forge 生成，见 [skills/skill-forge/dist/skills/skill-forge/SKILL.md](skills/skill-forge/dist/skills/skill-forge/SKILL.md)）：

@@ -3,7 +3,7 @@
 ---
 
 name: skill-forge
-description: 元技能，用于创建、维护、迭代本仓库中的所有模块（单模块：skills/agents/commands/rules/hooks/workflows；聚合套件：suites/）。通过自然语言对话驱动，自动生成目录、文档及 dist/ 下的成品文件。
+description: 元技能，用于创建、维护、迭代本仓库中的所有模块（单模块：skills/agents/commands/rules/hooks/workflows/docs；聚合套件：suites/）。通过自然语言对话驱动，自动生成目录、文档及 dist/ 下的成品文件。
 
 ---
 
@@ -196,9 +196,10 @@ description: 元技能，用于创建、维护、迭代本仓库中的所有模�
 | `skills/`    | `dist/skills/{name}/SKILL.md` | `~/.claude/skills/{name}/`（整目录，镜像中多一层） |
 | `agents/`    | `dist/agents/{name}.md`       | `~/.claude/agents/{name}.md` |
 | `commands/`  | `dist/commands/{name}.md`     | `~/.claude/commands/{name}.md` |
-| `rules/`     | `dist/rules/{name}.mdc`       | `~/.claude/rules/{name}.mdc` |
+| `rules/`     | `dist/rules/{name}.md`        | `~/.claude/rules/{name}.md` |
 | `hooks/`     | `dist/hooks/{name}.js`        | `~/.claude/hooks/{name}.js` |
 | `workflows/` | `dist/workflows/{name}.js`    | `~/.claude/workflows/{name}.js` |
+| `docs/`      | `dist/docs/{name}.md`         | `~/.claude/docs/{name}.md`（参考文档，不自动加载，按需 @ 引用） |
 
 ### 单模块模板示例
 

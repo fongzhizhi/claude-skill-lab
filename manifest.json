@@ -23,6 +23,10 @@
     "workflows": {
       "target": "{HOME}/.claude/workflows/",
       "pattern": "workflows/*/dist/*"
+    },
+    "docs": {
+      "target": "{HOME}/.claude/docs/",
+      "pattern": "docs/*/dist/*"
     }
   },
   "settings": {
