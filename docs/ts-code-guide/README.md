@@ -9,6 +9,7 @@
 | 文件 | 说明 |
 | --- | --- |
 | `ts-comments-guide.md` | 注释规范 v1.3：标签体系（核心 8 + 扩展）、JSDoc 规范、TODO/FIXME、AI 生成标识、反模式与审查清单 |
+| `ts-testing-guide.md` | 单元测试指南：测试奖杯策略、契约思维、Mock 分层决策、Vitest 实战技巧、断言规则、质量门禁 |
 
 ## 前置依赖
 

@@ -19,3 +19,7 @@ paths: "**/*.test.ts, **/*.spec.ts"
 - 测试间共享可变状态（依赖执行顺序、顺序敏感的 setup）
 - 整棵 DOM / 大对象快照断言（脆弱、难读；改为针对性断言）
 - 在测试输出中制造噪音（无诊断价值的 `console.log`）
+
+## 参考文档
+
+详细指南（测试策略模型、契约思维、Mock 分层决策、Vitest 实战技巧、断言规则、质量门禁）请查阅：`~/.claude/docs/ts-testing-guide.md`

@@ -12,7 +12,7 @@
 | `ts-coding-style.md` | `**/*.ts, **/*.tsx` | 命名约定、格式统一、文件组织 |
 | `ts-types.md` | `**/*.ts, **/*.tsx` | strict、禁 any、类型隔离 |
 | `ts-error-handling.md` | `**/*.ts, **/*.tsx` | 异步错误、异常语义、边界校验 |
-| `ts-testing.md` | `**/*.test.ts, **/*.spec.ts` | AAA 结构、行为命名、关键路径覆盖 |
+| `ts-testing.md` | `**/*.test.ts, **/*.spec.ts` | AAA 结构、行为命名、关键路径覆盖（详见 `~/.claude/docs/ts-testing-guide.md`） |
 
 ## 前置依赖
 
@@ -20,6 +20,7 @@
 | --- | --- |
 | 无外部 CLI | 纯文本规则，无需安装 |
 | TS 注释规范指南文档（软依赖） | `ts-comments` 规则引用 `~/.claude/docs/ts-comments-guide.md`，缺失时部署仅提示不拦截 |
+| TS 单元测试指南文档（软依赖） | `ts-testing` 规则引用 `~/.claude/docs/ts-testing-guide.md`，缺失时部署仅提示不拦截 |
 
 ## 部署
 
@@ -33,4 +34,4 @@ lab deploy docs/ts-code-guide
 
 ## 使用
 
-规则按 `paths` 自动生效：处理 `**/*.ts` / `**/*.tsx`（测试规则为 `.test.ts` / `.spec.ts`）文件时自动加载，其他文件不占用上下文。需查看详细指南时 AI 会主动引用 `@~/.claude/docs/ts-comments-guide.md`。
+规则按 `paths` 自动生效：处理 `**/*.ts` / `**/*.tsx`（测试规则为 `.test.ts` / `.spec.ts`）文件时自动加载，其他文件不占用上下文。需查看详细指南时 AI 会主动引用 `@~/.claude/docs/ts-comments-guide.md` / `@~/.claude/docs/ts-testing-guide.md`。

@@ -1,5 +1,9 @@
 # CHANGELOG —— ts-code-guide
 
+## v0.1.2 (2026-08-11)
+
+- 新增 `ts-testing-guide.md`：单元测试指南（测试奖杯策略、契约思维、Mock 分层决策、Vitest 实战技巧、断言规则、质量门禁），供 `ts-standards` 的 `ts-testing` 规则引用
+
 ## v0.1.1 (2026-08-11)
 
 - 文档文件改名为 `ts-comments-guide.md`（英文名，避免带空格中文路径在 `@` 引用与 shell 命令中的转义问题），同步更新 ts-standards 的引用与软依赖检测命令
