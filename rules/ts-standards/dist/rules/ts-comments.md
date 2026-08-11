@@ -24,4 +24,4 @@ paths: "**/*.ts, **/*.tsx"
 
 ## 参考文档
 
-详细指南（标签大全、JSDoc 格式、反模式示例、审查清单）请查阅：`~/.claude/docs/TypeScript 代码注释规范指南.md`
+详细指南（标签大全、JSDoc 格式、反模式示例、审查清单）请查阅：`~/.claude/docs/ts-comments-guide.md`

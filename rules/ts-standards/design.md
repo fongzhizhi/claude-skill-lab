@@ -11,7 +11,7 @@
 3. **paths 作用域**：统一 `**/*.ts, **/*.tsx`（测试规则限定 `.test.ts` / `.spec.ts`），仅在处理 TS 文件时自动加载，其他语言/文件不占上下文。
 4. **与 docs 模块的依赖协调（三层）**：
    - `lab deploy --all` 一并部署 docs 与 rules
-   - `meta.json` 软依赖（`required: false`）：检测 `~/.claude/docs/TypeScript 代码注释规范指南.md` 是否存在，缺失仅提示不拦截——文档缺失不影响规则本身执行
+   - `meta.json` 软依赖（`required: false`）：检测 `~/.claude/docs/ts-comments-guide.md` 是否存在，缺失仅提示不拦截——文档缺失不影响规则本身执行
    - 规则文件内引用文档绝对路径，AI 需要时按需读取
 5. **`.md` 后缀**：与官方文档一致（rules 目录下的 `.md` 文件 frontmatter 声明 `description` / `paths` 即可按路径作用域加载），遵循 skill-forge 约定。
 

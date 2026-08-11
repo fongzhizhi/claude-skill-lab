@@ -8,7 +8,7 @@
 
 | 文件 | 说明 |
 | --- | --- |
-| `TypeScript 代码注释规范指南.md` | 注释规范 v1.3：标签体系（核心 8 + 扩展）、JSDoc 规范、TODO/FIXME、AI 生成标识、反模式与审查清单 |
+| `ts-comments-guide.md` | 注释规范 v1.3：标签体系（核心 8 + 扩展）、JSDoc 规范、TODO/FIXME、AI 生成标识、反模式与审查清单 |
 
 ## 前置依赖
 
@@ -18,11 +18,11 @@
 
 ```bash
 lab deploy docs/ts-code-guide
-# 落点：~/.claude/docs/TypeScript 代码注释规范指南.md
+# 落点：~/.claude/docs/ts-comments-guide.md
 ```
 
 ## 使用
 
-- AI 需要时通过 `@~/.claude/docs/TypeScript 代码注释规范指南.md` 主动查阅（不自动加载，省 token）
+- AI 需要时通过 `@~/.claude/docs/ts-comments-guide.md` 主动查阅（不自动加载，省 token）
 - [rules/ts-standards](../../rules/ts-standards/README.md) 的 `ts-comments` 规则引用本文档作为详细指南
 - 后续新增规范文档：在 `dist/docs/` 下新增文件并重新部署
