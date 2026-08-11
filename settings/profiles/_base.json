@@ -50,5 +50,15 @@
       "Write(**/.env)",
       "Write(**/id_rsa*)"
     ]
+  },
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--autoConnect"
+      ]
+    }
   }
 }
