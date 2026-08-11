@@ -17,7 +17,7 @@
 - **自动化文档**：消除手动编辑 markdown 的负担，文档由 `skill-forge` 自动生成和更新。
 - **渐进式披露**：生成的内容遵循"核心指令 → 详细参考"的层级，避免信息过载。
 - **与 `lab` 解耦**：不依赖 `lab` 的实现细节，只负责生成仓库内的文件。
-- **统一成品目录**：所有模块（单模块和套件）的成品文件统一放在 `dist/` 下。
+- **统一成品目录**：所有模块（单模块和套件）的成品文件统一放在 `dist/` 下，且所有模块的 `dist/` 都与 `~/.claude/` 相对路径一一对应（镜像结构，如 `dist/commands/commit-draft.md` → `~/.claude/commands/commit-draft.md`），部署 = 按相对路径原样复制。
 - **可扩展**：支持所有现有类型（skills/agents/commands/rules/hooks/workflows）及聚合套件，新增类型无需改动核心逻辑。
 
 ## 工作流程设计
@@ -40,8 +40,9 @@ commands/commit-draft/
 ├── CHANGELOG.md    # 初始版本 v0.1.0
 ├── feedback.md     # 占位，后续记录反馈
 ├── meta.json       # 可选：声明外部 CLI 前置依赖（无依赖则不创建）
-└── dist/           # 成品目录
-    └── commit-draft.md  # 成品文件
+└── dist/           # 成品目录（~/.claude/ 镜像）
+    └── commands/
+        └── commit-draft.md  # 成品文件
 ```
 
 4. **填充模板**：
@@ -108,7 +109,7 @@ suites/data-tools/
 
 1. **定位模块**：扫描仓库，找到 `commands/commit-draft/`。
 2. **读取当前内容**：获取 `dist/` 下的成品文件及现有文档。
-3. **修改成品文件**：根据要求调整 `dist/commit-draft.md` 中的指令内容。
+3. **修改成品文件**：根据要求调整 `dist/commands/commit-draft.md` 中的指令内容。
 4. **更新文档**：
    - 在 `design.md` 中追加"变更理由"及新的设计决策。
    - 在 `CHANGELOG.md` 中记录版本（v0.1.1）及变更摘要。
@@ -136,7 +137,7 @@ suites/data-tools/
 
 用户操作：
 
-- 手动将某个现成的 `SKILL.md` 放入 `skills/some-skill/dist/SKILL.md`。
+- 手动将某个现成的 `SKILL.md` 放入 `skills/some-skill/dist/skills/some-skill/SKILL.md`。
 
 用户后续输入：
 `"/skill-forge 接管 skills/some-skill"`
@@ -196,15 +197,15 @@ suites/data-tools/
 
 - 所有文件操作限定在仓库根目录内，**不涉及 `~/.claude/`**。
 - 生成的文件使用 UTF-8 编码。
-- 单模块的成品文件放在 `dist/` 下，命名遵循模块规范。
-- 聚合套件的 `dist/` 下可自由组织子目录，由 `manifest.json` 声明映射。
+- 所有模块（单模块与套件）的 `dist/` 均为 `~/.claude/` 的相对路径镜像，dist/ 下所有文件（含辅助文件）按相对路径全量复制；单模块为隐式全量（无需声明），套件由 manifest.json 声明映射子集。
+- 聚合套件的 `dist/` 为 `~/.claude/` 的相对路径镜像（混合类型，含类型目录），由 `manifest.json` 声明映射子集。
 - 文档更新采用**追加模式**，不覆盖已有历史。
 
 ## 模板规范
 
 ### 单模块模板
 
-**Skill 模板** (`dist/SKILL.md`)：
+**Skill 模板** (`dist/skills/{name}/SKILL.md`)：
 
 ```yaml
 ---
@@ -217,7 +218,7 @@ version: 0.1.0
 { 详细指令内容 }
 ```
 
-**Command 模板** (`dist/{name}.md`)：
+**Command 模板** (`dist/commands/{name}.md`)：
 
 ```yaml
 ---
@@ -308,6 +309,7 @@ lab deploy {name}            # 聚合套件为 lab deploy suites/{name}
 
 ## 变更理由
 
+- **v0.4.0**：统一单模块 `dist/` 为"`~/.claude/` 的相对路径镜像"。此前单模块 `dist/` 形态与套件不一致（单模块无类型前缀层），且 lab 只复制单个成品文件（文件型忽略辅助文件）。v0.4.0 起所有模块（单模块与套件）的 `dist/` 均与 `~/.claude/` 相对路径一一对应（如 `dist/commands/commit-draft.md` → `~/.claude/commands/commit-draft.md`、`dist/skills/<name>/SKILL.md` → `~/.claude/skills/<name>/SKILL.md`）；lab deploy/status/remove 统一为全量镜像复制/核对/删除，单模块可附带 references/ 等辅助文件。套件（混合类型）保持 `~/.claude/` 镜像 + manifest 显式映射。
 - **v0.3.0**：用户反馈新模块的 README 偏简单，参照 openspec 的结构（简介、前置依赖、部署、使用）沉淀为统一的"模块 README 模板"；创建与接管流程均按此生成，保证新模块开箱即可读。
 - **v0.2.0**：lab 新增 meta.json 依赖机制后，为避免用户手动编写依赖声明，新增"meta.json 生成规则"并在各流程中自动维护。
 - **v0.1.0**：初始设计，通过对话驱动创建单模块与聚合套件。

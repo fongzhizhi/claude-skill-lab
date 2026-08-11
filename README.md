@@ -11,10 +11,10 @@
 ```
       仓库（工作台）                           本地（生产环境）
  ┌─────────────────────────────┐  lab deploy ┌───────────────────────────┐
- │ skills/<n>/dist/            │ ──────────▶ │ ~/.claude/skills/<n>/     │
- │ commands/<n>/dist/          │ ──────────▶ │ ~/.claude/commands/       │
- │ agents/ · rules/ · hooks/   │ ──────────▶ │ ~/.claude/对应目录         │
- │ workflows/<n>/dist/         │ ──────────▶ │ （成品单文件平铺，不嵌套）  │
+ │ skills/<n>/dist/            │ ──────────▶ │ ~/.claude/（镜像复制）     │
+ │ commands/<n>/dist/          │ ──────────▶ │   dist/ 相对路径原样落位   │
+ │ agents/ · rules/ · hooks/   │ ──────────▶ │   如 commands/foo.md →     │
+ │ workflows/<n>/dist/         │ ──────────▶ │   ~/.claude/commands/foo.md│
  │ suites/<n>/dist/            │ ──────────▶ │ 按 manifest.json 映射      │
  │ settings/                   │ ──────────▶ │ ~/.claude/ + VSCode       │
  └─────────────▲───────────────┘             └───────────┬───────────────┘
@@ -25,12 +25,12 @@
         调整 dist/ 成品 ◀───── 反馈 · 迭代（skill-forge）─┘
 ```
 
-两种模块形态：
+两种模块形态（`dist/` 均与 `~/.claude/` 相对路径一一对应，可直接 `cp -r <module>/dist/* ~/.claude/` 验证）：
 
 | 形态 | 说明 | 适用场景 |
 | --- | --- | --- |
-| **单模块** | 单一类型、单个成品文件（`dist/`） | 一个技能、一个斜杠命令 |
-| **聚合套件** | 多文件、可混合类型、保持子目录结构 | OpenSpec 工具集、工作流系统 |
+| **单模块** | 单一类型、`dist/` 全量镜像、零配置 | 一个技能、一个斜杠命令 |
+| **聚合套件** | 多文件、可混合类型、`manifest.json` 声明映射 | OpenSpec 工具集、工作流系统 |
 
 > 目录结构、模块规范与部署细节见 [docs/design.md](docs/design.md)。
 

@@ -15,6 +15,8 @@
 | 迭代模块 | 修改 `dist/` 成品文件，同步维护 design/CHANGELOG/feedback 与 `meta.json` |
 | 接管外部导入 | 扫描已放入的成品文件，补全文档并核对 `manifest.json` / `meta.json` |
 
+> 所有模块 `dist/` 均与 `~/.claude/` 相对路径一一对应（镜像结构）：单模块如 `dist/commands/commit-draft.md` → `~/.claude/commands/commit-draft.md`、`dist/skills/<name>/SKILL.md` → `~/.claude/skills/<name>/SKILL.md`，可直接 `cp -r <module>/dist/* ~/.claude/` 验证。
+
 ## 前置依赖
 
 无外部 CLI 依赖（纯对话逻辑）。

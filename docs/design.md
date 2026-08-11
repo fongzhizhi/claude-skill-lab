@@ -93,9 +93,11 @@ claude-skill-lab/
 │       ├── design.md            设计决策（由 skill-forge 维护）
 │       ├── CHANGELOG.md         迭代历史（由 skill-forge 维护）
 │       ├── feedback.md          问题清单（由 skill-forge 维护）
-│       └── dist/                ← 成品目录
-│           ├── SKILL.md         成品主文件
-│           └── scripts/         辅助脚本（可选）
+│       └── dist/                ← 成品目录（~/.claude/ 镜像）
+│           └── skills/
+│               └── <name>/
+│                   ├── SKILL.md         成品主文件
+│                   └── scripts/         辅助脚本（可选）
 │
 ├── agents/                      单模块：智能体 → ~/.claude/agents/
 │   └── <name>/
@@ -104,7 +106,8 @@ claude-skill-lab/
 │       ├── CHANGELOG.md
 │       ├── feedback.md
 │       └── dist/
-│           └── <name>.md        成品
+│           └── agents/
+│               └── <name>.md        成品
 │
 ├── commands/                    单模块：斜杠命令 → ~/.claude/commands/
 │   └── <name>/
@@ -113,7 +116,8 @@ claude-skill-lab/
 │       ├── CHANGELOG.md
 │       ├── feedback.md
 │       └── dist/
-│           └── <name>.md        成品
+│           └── commands/
+│               └── <name>.md        成品
 │
 ├── rules/                       单模块：规则文件 → ~/.claude/rules/
 │   └── <name>/
@@ -122,7 +126,8 @@ claude-skill-lab/
 │       ├── CHANGELOG.md
 │       ├── feedback.md
 │       └── dist/
-│           └── <name>.mdc       成品
+│           └── rules/
+│               └── <name>.mdc       成品
 │
 ├── hooks/                       单模块：Hook 脚本 → ~/.claude/hooks/
 │   └── <name>/
@@ -131,7 +136,8 @@ claude-skill-lab/
 │       ├── CHANGELOG.md
 │       ├── feedback.md
 │       └── dist/
-│           └── <name>.js        成品
+│           └── hooks/
+│               └── <name>.js        成品
 │
 ├── workflows/                   单模块：动态工作流 → ~/.claude/workflows/
 │   └── <name>/
@@ -140,7 +146,8 @@ claude-skill-lab/
 │       ├── CHANGELOG.md
 │       ├── feedback.md
 │       └── dist/
-│           └── <name>.js        成品
+│           └── workflows/
+│               └── <name>.js        成品
 │
 ├── suites/                      ← 聚合套件（多文件/混合类型）
 │   └── <name>/
@@ -184,18 +191,18 @@ claude-skill-lab/
 | `feedback.md`  | 问题清单           | `skill-forge` 自动记录                 |
 | `dist/`        | **成品文件目录**   | `skill-forge` 生成，用户可通过对话修改 |
 
-`dist/` 目录下的成品文件命名规则：
+`dist/` 目录为 `~/.claude/` 的**相对路径镜像**，成品文件按部署落点排布：
 
-| 类型         | 成品文件名   | 说明                             |
-| ------------ | ------------ | -------------------------------- |
-| `skills/`    | `SKILL.md`   | 固定命名，符合 Agent Skills 标准 |
-| `agents/`    | `<name>.md`  | 与目录名一致                     |
-| `commands/`  | `<name>.md`  | 与目录名一致                     |
-| `rules/`     | `<name>.mdc` | 与目录名一致                     |
-| `hooks/`     | `<name>.js`  | 与目录名一致                     |
-| `workflows/` | `<name>.js`  | 与目录名一致                     |
+| 类型         | 成品文件位置                     | 部署落点                          |
+| ------------ | -------------------------------- | --------------------------------- |
+| `skills/`    | `dist/skills/<name>/SKILL.md`    | `~/.claude/skills/<name>/`（整目录）|
+| `agents/`    | `dist/agents/<name>.md`          | `~/.claude/agents/<name>.md` |
+| `commands/`  | `dist/commands/<name>.md`        | `~/.claude/commands/<name>.md` |
+| `rules/`     | `dist/rules/<name>.mdc`          | `~/.claude/rules/<name>.mdc` |
+| `hooks/`     | `dist/hooks/<name>.js`           | `~/.claude/hooks/<name>.js` |
+| `workflows/` | `dist/workflows/<name>.js`       | `~/.claude/workflows/<name>.js` |
 
-> **重要**：`dist/` 是唯一被 `lab deploy` 关注的目录。部署时，`lab` 将 `dist/` 下的**所有内容**递归复制到目标位置。因此，`dist/` 内可以自由放置额外的资源文件（如脚本、模板、图片等），无需修改 `lab` 代码。
+> **重要**：`dist/` 是唯一被 `lab deploy` 关注的目录。部署时，`lab` 将 `dist/` 下的**所有内容**按相对路径递归复制到 `~/.claude/`（镜像复制）。因此，`dist/` 内可以自由放置额外的资源文件（如脚本、模板、图片等），无需修改 `lab` 代码；也可直接 `cp -r <module>/dist/* ~/.claude/` 验证部署。
 
 ### 模块来源
 
@@ -206,7 +213,7 @@ claude-skill-lab/
 
 **外部导入模块的处理流程**：
 
-1. 用户将成品文件放入对应模块的 `dist/` 目录（如 `skills/<name>/dist/SKILL.md`）
+1. 用户将成品文件放入对应模块的 `dist/` 目录（如 `skills/<name>/dist/skills/<name>/SKILL.md`）
 2. `lab deploy <name>` 直接部署到 `~/.claude/`
 3. 若需迭代，在对话中调用 `skill-forge` 并指定该模块
 4. `skill-forge` 扫描目录，识别已有文件，补全根目录下的文档文件（README、design、CHANGELOG、feedback）
@@ -410,18 +417,20 @@ lab deploy suites/openspec    # 显式部署套件
 
 1. 定位到 `{type}/{name}/`
 2. 检查 `dist/` 目录是否存在
-3. 根据顶层 `manifest.json` 中的 `types` 映射，确定目标根目录（如 `skills/` → `~/.claude/skills/`）
-4. 将 `{type}/{name}/dist/` 下的**所有内容**递归复制到 `{target}/{name}/`
-5. 覆盖已有文件
+3. 将 `{type}/{name}/dist/` 下的**所有内容**按相对路径递归复制到 `~/.claude/`（镜像复制——`dist/` 即 `~/.claude/` 的相对路径镜像，单模块为全量镜像，无需声明）
+4. 覆盖已有文件
 
 **示例**：
 
-- 仓库：`skills/commit-helper/dist/SKILL.md`
+- 仓库：`commands/commit-helper/dist/commands/commit-helper.md`
+- 目标：`~/.claude/commands/commit-helper.md`
+
+- 仓库：`skills/commit-helper/dist/skills/commit-helper/SKILL.md`
 - 目标：`~/.claude/skills/commit-helper/SKILL.md`
 
 如果 `dist/` 下有子目录，一并复制：
 
-- `skills/commit-helper/dist/scripts/helper.py` → `~/.claude/skills/commit-helper/scripts/helper.py`
+- `skills/commit-helper/dist/skills/commit-helper/scripts/helper.py` → `~/.claude/skills/commit-helper/scripts/helper.py`
 
 ### 聚合套件部署
 

@@ -21,7 +21,7 @@ description: 元技能，用于创建、维护、迭代本仓库中的所有模�
 
 - 根目录：`README.md`、`design.md`、`CHANGELOG.md`、`feedback.md`
 - `meta.json`（按需）：模块依赖外部 CLI 时声明前置依赖（见"meta.json 生成规则"）
-- `dist/` 目录：成品文件（如 `SKILL.md`、`{name}.md` 等）
+- `dist/` 目录：成品目录，与 `~/.claude/` 相对路径一一对应（镜像结构），见"模板规范"
 
 ### 2. 创建聚合套件
 
@@ -187,20 +187,22 @@ description: 元技能，用于创建、维护、迭代本仓库中的所有模�
 
 ## 模板规范
 
-### 单模块成品文件命名
+### 单模块成品文件命名（dist/ 即 ~/.claude/ 的相对路径镜像）
 
-| 类型         | 成品文件位置      | 说明         |
-| ------------ | ----------------- | ------------ |
-| `skills/`    | `dist/SKILL.md`   | 固定命名     |
-| `agents/`    | `dist/{name}.md`  | 与目录名一致 |
-| `commands/`  | `dist/{name}.md`  | 与目录名一致 |
-| `rules/`     | `dist/{name}.mdc` | 与目录名一致 |
-| `hooks/`     | `dist/{name}.js`  | 与目录名一致 |
-| `workflows/` | `dist/{name}.js`  | 与目录名一致 |
+单模块 `dist/` 目录与 `~/.claude/` **一一对应**（镜像结构），`dist/` 下所有文件按相对路径原样复制（含 references/、脚本等辅助文件），可直接 `cp -r <module>/dist/* ~/.claude/` 验证：
+
+| 类型         | 成品文件位置                  | 部署落点 / 说明                                      |
+| ------------ | ----------------------------- | ------------------------------------------------------ |
+| `skills/`    | `dist/skills/{name}/SKILL.md` | `~/.claude/skills/{name}/`（整目录，镜像中多一层） |
+| `agents/`    | `dist/agents/{name}.md`       | `~/.claude/agents/{name}.md` |
+| `commands/`  | `dist/commands/{name}.md`     | `~/.claude/commands/{name}.md` |
+| `rules/`     | `dist/rules/{name}.mdc`       | `~/.claude/rules/{name}.mdc` |
+| `hooks/`     | `dist/hooks/{name}.js`        | `~/.claude/hooks/{name}.js` |
+| `workflows/` | `dist/workflows/{name}.js`    | `~/.claude/workflows/{name}.js` |
 
 ### 单模块模板示例
 
-**Skill** (`dist/SKILL.md`)：
+**Skill** (`dist/skills/{name}/SKILL.md`)：
 
 ```yaml
 ---
@@ -213,7 +215,7 @@ version: 0.1.0
 { 详细指令 }
 ```
 
-**Command** (`dist/{name}.md`)：
+**Command** (`dist/commands/{name}.md`)：
 
 ```yaml
 ---
@@ -318,7 +320,7 @@ lab deploy {name}            # 聚合套件为 lab deploy suites/{name}
 **skill-forge**：
 
 - 我将创建 `skills/commit-helper/` 目录。
-- 生成 `dist/SKILL.md` 描述如何分析暂存区并生成 commit message。
+- 生成 `dist/skills/commit-helper/SKILL.md` 描述如何分析暂存区并生成 commit message。
 - 生成根目录下的 README、design、CHANGELOG、feedback。
 - 完成后，请运行 `lab deploy commit-helper` 安装。
 
@@ -342,7 +344,7 @@ lab deploy {name}            # 聚合套件为 lab deploy suites/{name}
 **skill-forge**：
 
 - 我将创建 `commands/json-beautify/` 目录。
-- 生成 `dist/json-beautify.md`，指令内容为纯文本格式化逻辑，不依赖外部工具。
+- 生成 `dist/commands/json-beautify.md`，指令内容为纯文本格式化逻辑，不依赖外部工具。
 - 经判断无需 `meta.json`（无外部 CLI 依赖），不创建。
 - 生成根目录下的 README、design、CHANGELOG、feedback。
 - 完成后，请运行 `lab deploy json-beautify` 安装。
@@ -354,7 +356,7 @@ lab deploy {name}            # 聚合套件为 lab deploy suites/{name}
 **skill-forge**：
 
 - 定位到 `skills/commit-helper/`。
-- 修改 `dist/SKILL.md` 增加长度限制。
+- 修改 `dist/skills/commit-helper/SKILL.md` 增加长度限制。
 - 更新 `design.md` 记录变更原因。
 - 更新 `CHANGELOG.md` 至 v0.1.1。
 - 请重新部署测试。

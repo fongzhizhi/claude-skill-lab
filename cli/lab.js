@@ -12,35 +12,13 @@ const { execSync } = require("child_process");
 const ROOT = path.resolve(__dirname, "..");
 const HOME = os.homedir();
 
-const TYPES = {
-  skills: { target: path.join(HOME, ".claude", "skills"), file: "SKILL.md" },
-  agents: { target: path.join(HOME, ".claude", "agents"), file: null }, // 动态
-  commands: { target: path.join(HOME, ".claude", "commands"), file: null },
-  rules: { target: path.join(HOME, ".claude", "rules"), file: null },
-  hooks: { target: path.join(HOME, ".claude", "hooks"), file: null },
-  workflows: { target: path.join(HOME, ".claude", "workflows"), file: null },
-};
+// 类型目录（单模块）——单模块的 dist/ 是 ~/.claude/ 的**全量镜像**：
+// dist/ 下所有文件按相对路径原样复制到 ~/.claude/（如 dist/commands/foo.md →
+// ~/.claude/commands/foo.md），与聚合套件共用同一认知模型，lab 无需按类型特殊处理
+const TYPES = ["skills", "agents", "commands", "rules", "hooks", "workflows"];
 
-// 目录型类型：dist/ 整目录复制到 ~/.claude/<type>/<name>/
-// 其余为文件型：单个成品文件复制为 ~/.claude/<type>/<成品名>
-const DIR_TYPES = new Set(["skills"]);
-
-// 成品文件名映射（用于文件型单模块）
-const DIST_FILE_MAP = {
-  skills: "SKILL.md",
-  agents: "{name}.md",
-  commands: "{name}.md",
-  rules: "{name}.mdc",
-  hooks: "{name}.js",
-  workflows: "{name}.js",
-};
-
-// 文件型模块的成品文件名（在 dist/ 中寻找）
-function getDistFileName(type, name) {
-  const pattern = DIST_FILE_MAP[type];
-  if (!pattern) return null;
-  return pattern.replace("{name}", name);
-}
+// ~/.claude/ 根：单模块 dist/ 即其全量镜像（隐式），套件经 manifest.json 声明映射子集
+const CLAUDE_ROOT = path.join(HOME, ".claude");
 
 // ============================================
 // 工具函数
@@ -89,11 +67,52 @@ function copyDir(src, dest) {
   return true;
 }
 
+// 镜像核对：srcDir 下所有文件按相对路径在 destRoot 下逐一检查，
+// 返回已部署数与缺失的相对路径列表（用于 lab status）
+function checkDistMirror(srcDir, destRoot) {
+  let deployed = 0;
+  const missing = [];
+  const walk = (src, dest) => {
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+    for (const entry of entries) {
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+      if (entry.isDirectory()) {
+        walk(srcPath, destPath);
+      } else if (fs.existsSync(destPath)) {
+        deployed++;
+      } else {
+        missing.push(path.relative(destRoot, destPath));
+      }
+    }
+  };
+  walk(srcDir, destRoot);
+  return { deployed, missing };
+}
+
+// 镜像删除：删除 destRoot 下与 srcDir 相对路径对应的文件（用于 lab remove）
+function removeDistMirror(srcDir, destRoot) {
+  const walk = (src, dest) => {
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+    for (const entry of entries) {
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+      if (entry.isDirectory()) {
+        walk(srcPath, destPath);
+      } else if (fs.existsSync(destPath)) {
+        fs.unlinkSync(destPath);
+        log(`  🗑️  删除: ${destPath}`);
+      }
+    }
+  };
+  walk(srcDir, destRoot);
+}
+
 function findModules() {
   const result = { types: {}, suites: {} };
 
   // 扫描单模块类型目录
-  for (const [type, config] of Object.entries(TYPES)) {
+  for (const type of TYPES) {
     const typeDir = path.join(ROOT, type);
     if (!fs.existsSync(typeDir)) continue;
     const dirs = fs
@@ -148,7 +167,7 @@ function resolveModule(name) {
   }
 
   // 检查是否显式指定了类型前缀
-  for (const [type, config] of Object.entries(TYPES)) {
+  for (const type of TYPES) {
     if (name.startsWith(type + "/")) {
       const modName = name.replace(new RegExp("^" + type + "/"), "");
       if (modules.types[modName] && modules.types[modName].includes(type)) {
@@ -247,35 +266,13 @@ function deploySingleModule(type, name, modulePath) {
     error(`模块 "${name}" 没有 dist/ 目录`);
   }
 
-  if (DIR_TYPES.has(type)) {
-    // 目录型（如 skills）：dist/ 整目录复制，SKILL.md 可直接被识别
-    const targetDir = path.join(TYPES[type].target, name);
-    log(`部署: ${type}/${name} → ${targetDir}`);
-    if (copyDir(distPath, targetDir)) {
-      success(`部署完成: ${name}`);
-    } else {
-      error(`部署失败: ${name}`);
-    }
-    return;
+  // dist/ 即 ~/.claude/ 的全量镜像：dist/ 下所有文件按相对路径原样复制
+  log(`部署: ${type}/${name} → ${CLAUDE_ROOT}`);
+  if (copyDir(distPath, CLAUDE_ROOT)) {
+    success(`部署完成: ${name}`);
+  } else {
+    error(`部署失败: ${name}`);
   }
-
-  // 文件型（commands/agents/rules/hooks/workflows）：复制单个成品文件，
-  // 直接位于 ~/.claude/<type>/ 下，避免嵌套目录导致命令名被解析为 <dir>:<file>
-  const distFile = getDistFileName(type, name);
-  if (!distFile) error(`未知类型: ${type}`);
-
-  const srcFile = path.join(distPath, distFile);
-  if (!fs.existsSync(srcFile)) {
-    error(`模块 "${name}" 的 dist/ 中缺少成品文件 "${distFile}"`);
-  }
-
-  const targetFile = path.join(TYPES[type].target, distFile);
-  const parent = path.dirname(targetFile);
-  if (!fs.existsSync(parent)) fs.mkdirSync(parent, { recursive: true });
-
-  log(`部署: ${type}/${name} → ${targetFile}`);
-  fs.copyFileSync(srcFile, targetFile);
-  success(`部署完成: ${name}`);
 }
 
 function deploySuite(name, suitePath) {
@@ -561,39 +558,16 @@ function cmdStatus() {
   const typeNames = Object.keys(modules.types).sort();
   for (const name of typeNames) {
     for (const type of modules.types[name]) {
+      // 镜像核对：dist/ 相对路径逐一对应 ~/.claude/（全量镜像）
       const distPath = path.join(ROOT, type, name, "dist");
-      const distFiles = fs.existsSync(distPath) ? fs.readdirSync(distPath) : [];
+      const { deployed, missing } = checkDistMirror(distPath, CLAUDE_ROOT);
 
-      if (DIR_TYPES.has(type)) {
-        // 目录型：逐文件检查目标目录
-        const target = path.join(TYPES[type].target, name);
-        let deployed = false;
-        let missing = [];
-        for (const file of distFiles) {
-          const targetFile = path.join(target, file);
-          if (fs.existsSync(targetFile)) {
-            deployed = true;
-          } else {
-            missing.push(file);
-          }
-        }
-
-        if (deployed && missing.length === 0) {
-          log(`  ✅ ${type}/${name} - 已部署`);
-        } else if (deployed && missing.length > 0) {
-          log(`  ⚠️  ${type}/${name} - 部分部署 (缺失: ${missing.join(", ")})`);
-        } else {
-          log(`  ❌ ${type}/${name} - 未部署`);
-        }
+      if (deployed > 0 && missing.length === 0) {
+        log(`  ✅ ${type}/${name} - 已部署`);
+      } else if (deployed > 0) {
+        log(`  ⚠️  ${type}/${name} - 部分部署 (缺失: ${missing.join(", ")})`);
       } else {
-        // 文件型：检查单个成品文件
-        const distFile = getDistFileName(type, name);
-        const targetFile = path.join(TYPES[type].target, distFile);
-        if (fs.existsSync(targetFile)) {
-          log(`  ✅ ${type}/${name} - 已部署`);
-        } else {
-          log(`  ❌ ${type}/${name} - 未部署`);
-        }
+        log(`  ❌ ${type}/${name} - 未部署`);
       }
     }
   }
@@ -712,26 +686,8 @@ function cmdRemove(args) {
     }
 
     log(`卸载: ${result.type}/${result.name}`);
-    if (DIR_TYPES.has(result.type)) {
-      // 目录型：删除目标目录中与 dist/ 对应的文件
-      const target = path.join(TYPES[result.type].target, result.name);
-      const files = fs.readdirSync(distPath);
-      for (const file of files) {
-        const targetFile = path.join(target, file);
-        if (fs.existsSync(targetFile)) {
-          fs.unlinkSync(targetFile);
-          log(`  🗑️  删除: ${targetFile}`);
-        }
-      }
-    } else {
-      // 文件型：删除单个成品文件
-      const distFile = getDistFileName(result.type, result.name);
-      const targetFile = path.join(TYPES[result.type].target, distFile);
-      if (fs.existsSync(targetFile)) {
-        fs.unlinkSync(targetFile);
-        log(`  🗑️  删除: ${targetFile}`);
-      }
-    }
+    // 镜像删除：按 dist/ 相对路径删除 ~/.claude/ 下对应文件
+    removeDistMirror(distPath, CLAUDE_ROOT);
     success(`卸载完成: ${name}`);
   }
 }

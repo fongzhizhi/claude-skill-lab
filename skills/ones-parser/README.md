@@ -14,7 +14,7 @@
 lab deploy ones-parser
 ```
 
-部署后：`dist/SKILL.md` → `~/.claude/skills/ones-parser/SKILL.md`
+部署后：`dist/skills/ones-parser/SKILL.md` → `~/.claude/skills/ones-parser/SKILL.md`
 
 ## 使用
 

@@ -28,19 +28,22 @@ npm run lab:switch <profile>   # 切换模型配置（--ephemeral 仅当前会�
 
 | 形态 | 位置 | 部署方式 |
 | --- | --- | --- |
-| 单模块 | `skills/` `agents/` `commands/` `rules/` `hooks/` `workflows/` 下的 `<name>/` | 按类型自动推断目标位置 |
+| 单模块 | `skills/` `agents/` `commands/` `rules/` `hooks/` `workflows/` 下的 `<name>/` | `dist/` 全量镜像复制到 `~/.claude/` |
 | 聚合套件 | `suites/<name>/` | 按套件内 `manifest.json` 的 `mappings` 映射 |
 
-每个模块目录统一结构（skill-forge 生成，见 [skills/skill-forge/dist/SKILL.md](skills/skill-forge/dist/SKILL.md)）：
+每个模块目录统一结构（skill-forge 生成，见 [skills/skill-forge/dist/skills/skill-forge/SKILL.md](skills/skill-forge/dist/skills/skill-forge/SKILL.md)）：
 
 - 根目录：`README.md`、`design.md`、`CHANGELOG.md`、`feedback.md` —— 文档，由 skill-forge 维护
-- `dist/` —— **成品目录，`lab deploy` 唯一关注的地方**，内容递归复制到目标位置
+- `dist/` —— **成品目录，与 `~/.claude/` 相对路径一一对应（镜像结构），`lab deploy` 唯一关注的地方**，所有文件按相对路径原样递归复制
 - `meta.json` —— 可选，声明外部 CLI 前置依赖
 
 ### 部署形态（cli/lab.js 核心逻辑）
 
-- `skills` 是唯一的**目录型**类型：`dist/` 整目录复制到 `~/.claude/skills/<name>/`
-- 其余（agents/commands/rules/hooks/workflows）为**文件型**：`dist/` 中单个成品文件（`<name>.md` / `<name>.mdc` / `<name>.js`，文件名与目录名一致）直接复制为 `~/.claude/<type>/<成品文件名>`，**不创建嵌套目录**——避免命令名被解析为 `<dir>:<file>` 导致斜杠命令失效
+- **dist/ 即 ~/.claude/ 镜像**：所有模块（单模块与套件）的 `dist/` 目录都与 `~/.claude/` 的相对路径一一对应，部署 = 按相对路径原样递归复制。单模块为隐式全量镜像（`dist/` 下所有文件直接复制，无需声明）；套件通过 `manifest.json` 显式声明映射子集。
+- 单模块示例：`dist/commands/foo.md` → `~/.claude/commands/foo.md`；`dist/skills/foo/SKILL.md` → `~/.claude/skills/foo/SKILL.md`（skills 部署目标为目录 `~/.claude/skills/<name>/`，故镜像中多一层）
+- **全量复制**：`dist/` 下所有文件（含 references/ 等辅助文件）一并复制，单模块无需声明即可附带额外资源
+- **直接复制验证**：`cp -r <module>/dist/* ~/.claude/` 即为完整部署
+- 部署目标不创建多余的嵌套目录（如 `~/.claude/commands/<name>/`）——避免命令名被解析为 `<dir>:<file>` 导致斜杠命令失效
 
 ### 聚合套件 manifest.json
 
@@ -71,7 +74,7 @@ npm run lab:switch <profile>   # 切换模型配置（--ephemeral 仅当前会�
 
 ### 创建 / 迭代模块：skill-forge 是唯一入口
 
-`skills/skill-forge/dist/SKILL.md` 是元技能，负责创建、迭代、接管所有模块。核心约定：
+`skills/skill-forge/dist/skills/skill-forge/SKILL.md` 是元技能，负责创建、迭代、接管所有模块。核心约定：
 
 - **不要手动编辑模块文档**（README/design/CHANGELOG/feedback）——由 skill-forge 在对话中维护
 - 需求变更时直接修改 `dist/` 成品文件，由 skill-forge 同步文档、递增 CHANGELOG 版本、维护 `meta.json`
