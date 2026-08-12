@@ -50,12 +50,16 @@ npm run lab:deploy skill-forge
 #    /skill-forge "创建一个用于整理 Git commit 的技能，叫 commit-draft"
 
 # 4. 部署并使用
-npm run lab:deploy commit-draft   # 之后对话中输入 /commit-draft 即可使用
+npm run lab:deploy --all   # 推荐：一键部署全部模块，技能依赖的 docs / rules 一并携带
+#    npm run lab:deploy commit-draft   # 或只部署单个模块（不携带其依赖的文档/规则）
+#    之后对话中输入 /commit-draft 即可使用
 
 # 5. 切换模型配置
 npm run lab:switch                # 列出可用 profiles
 npm run lab:switch deepseek       # 切换到 deepseek
 ```
+
+> **为什么推荐一键部署？** 技能不是孤立的——`comment-keeper` / `test-keeper` 等运行时依赖 `docs/`（规范指南）与 `rules/`（强制规则）两个独立模块，`lab:deploy <name>` 只部署目标模块本身、不携带这些依赖；只有 `lab:deploy --all` 会把 skill / command / rules / docs / suite / settings 全部一次落位。迭代单一模块时才用 `lab:deploy <name>`。
 
 > 不满意？直接在对话中对 `skill-forge` 说："commit-draft 生成的 message 太长了，改成不超过 50 个字符"。`skill-forge` 自动更新文档、修改成品并提示重新部署，全程无需手动编辑任何 markdown。
 
@@ -84,18 +88,22 @@ npm run lab:switch deepseek       # 切换到 deepseek
 | 模块 | 类型 | 说明 |
 | --- | --- | --- |
 | **[skill-forge](skills/skill-forge/README.md)** | skill | 创建、维护、迭代所有模块（单模块 + 聚合套件） |
+| **[comment-keeper](skills/comment-keeper/README.md)** | skill | 按 TS 注释规范统一调整代码注释（核对/增删改/补录，必要时重构自解释） |
+| **[test-keeper](skills/test-keeper/README.md)** | skill | 按测试规范补充与修复单元测试：无测试走方案，有测试审质量 |
+| **[live-debugger](skills/live-debugger/README.md)** | skill | 模拟人工 debugger 流程定位前端 bug：埋点 → 复现 → 收敛 → 修复清理 |
+| **[quick-start](skills/quick-start/README.md)** | skill | 快速验证功能/新改动：注入入口与数据，验证后清场恢复原状 |
+| **[ones-parser](skills/ones-parser/README.md)** | skill | 解析 ONES 平台复制的工单内容（ID / 标题 / 链接），作为 commit 引用的单一事实来源 |
 | **[commit-draft](commands/commit-draft/README.md)** | command | 基于暂存区生成 Conventional Commits 规范的 commit message |
 | **[mojibake-fixer](commands/mojibake-fixer/README.md)** | command | 修复 AI 生成内容中的乱码（U+FFFD 等） |
 | **[session-review](commands/session-review/README.md)** | command | 生成技术复盘报告（背景、根因、方案、验证） |
-| **[ones-parser](skills/ones-parser/README.md)** | skill | 解析 ONES 平台复制的工单内容（ID / 标题 / 链接），作为 commit 引用的单一事实来源 |
+| **[ts-standards](rules/ts-standards/README.md)** | rules | 5 条 TS 必备规则（注释/风格/类型/错误处理/测试），路径作用域自动生效 |
+| **[ts-code-guide](docs/ts-code-guide/README.md)** | docs | TS 规范参考文档（注释 + 测试指南）→ `~/.claude/docs/`，按需引用不占上下文 |
 | **[openspec](suites/openspec/README.md)** | suite | 6 个 `/opsx:*` 斜杠命令，规范驱动开发（需全局安装 `openspec` CLI） |
-| **[ts-standards](rules/ts-standards/README.md)** | rules | 5 条 TS 主流必备规则（注释/风格/类型/错误处理/测试），路径作用域自动生效 |
-| **[ts-code-guide](docs/ts-code-guide/README.md)** | docs | TS 注释规范参考文档 → `~/.claude/docs/`，按需引用不占上下文 |
 | **[settings](settings/README.md)** | settings | 多模型切换（`_base.json` + profiles 合并），VSCode 配置部署 |
 
 ### 🔴 规划中
 
-技能类：`comment-keeper`（代码注释梳理）· `live-debugger`（运行时调试）· `quick-test`（快速测试加速器）
+暂无规划技能。
 
 类型目录：`hooks/` · `workflows/` · `agents/` 已预留，按需生长
 
