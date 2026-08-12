@@ -36,30 +36,30 @@
 
 ## 快速开始
 
-前置条件：Node.js 20+（Claude Code 自带）· 已安装 Claude Code
+前置条件：Node.js 18+（Claude Code 自带）· 已安装 Claude Code
 
 ```bash
 # 1. 查看帮助与可用模块
 npm run lab
 npm run lab:list
 
-# 2. 部署元技能 skill-forge（创建/维护所有模块的入口）
-npm run lab:deploy skill-forge
+# 2. 一键部署所有模块（主流程，一条命令全部就位）
+npm run lab:deploy --all
+#    skill / command / rules / docs / suite / settings 一次落位
+#    技能依赖的 docs / rules 会一并携带，无需逐个部署
 
-# 3. 在对话中创建你的第一个模块
+# 3. 在对话中创建/修改你的第一个模块
 #    /skill-forge "创建一个用于整理 Git commit 的技能，叫 commit-draft"
 
-# 4. 部署并使用
-npm run lab:deploy --all   # 推荐：一键部署全部模块，技能依赖的 docs / rules 一并携带
-#    npm run lab:deploy commit-draft   # 或只部署单个模块（不携带其依赖的文档/规则）
-#    之后对话中输入 /commit-draft 即可使用
+# 4. 开发完成后，只重新部署迭代过的模块（没必要全量重来）
+npm run lab:deploy commit-draft   # 之后对话中输入 /commit-draft 即可使用
 
 # 5. 切换模型配置
 npm run lab:switch                # 列出可用 profiles
 npm run lab:switch deepseek       # 切换到 deepseek
 ```
 
-> **为什么推荐一键部署？** 技能不是孤立的——`comment-keeper` / `test-keeper` 等运行时依赖 `docs/`（规范指南）与 `rules/`（强制规则）两个独立模块，`lab:deploy <name>` 只部署目标模块本身、不携带这些依赖；只有 `lab:deploy --all` 会把 skill / command / rules / docs / suite / settings 全部一次落位。迭代单一模块时才用 `lab:deploy <name>`。
+> **主流程是一键部署，而不是逐个部署。** 技能不是孤立的——`comment-keeper` / `test-keeper` 等运行时依赖 `docs/`（规范指南）与 `rules/`（强制规则）两个独立模块，`lab:deploy <name>` 只部署目标模块本身、不携带这些依赖；只有 `lab:deploy --all` 才把全部模块一次落位。**单独部署是开发完成后的迭代动作**：`/skill-forge` 改完某个模块后，只重新部署那一个，避免全量覆盖。
 
 > 不满意？直接在对话中对 `skill-forge` 说："commit-draft 生成的 message 太长了，改成不超过 50 个字符"。`skill-forge` 自动更新文档、修改成品并提示重新部署，全程无需手动编辑任何 markdown。
 
@@ -83,7 +83,7 @@ npm run lab:switch deepseek       # 切换到 deepseek
 
 ## 当前状态
 
-### ✅ 已部署可用
+### 🟢 已部署可用
 
 | 模块 | 类型 | 说明 |
 | --- | --- | --- |
@@ -101,9 +101,14 @@ npm run lab:switch deepseek       # 切换到 deepseek
 | **[openspec](suites/openspec/README.md)** | suite | 6 个 `/opsx:*` 斜杠命令，规范驱动开发（需全局安装 `openspec` CLI） |
 | **[settings](settings/README.md)** | settings | 多模型切换（`_base.json` + profiles 合并），VSCode 配置部署 |
 
-### 🔴 规划中
+### 🟡 规划中
 
-暂无规划技能。
+| 方向 | 说明 |
+| --- | --- |
+| **keeper 补齐** | `style-keeper` / `type-keeper` / `error-handling-keeper`，补齐 ts-standards 5 条规则的执行闭环 |
+| **hooks 落地** | 部署后自动核对一致性、提交前提醒等自动化 hook |
+| **agents 子代理** | 规范审查专用代理，主对话只拿结论，省上下文 |
+| **workflows 编排** | 批量重构 / 批量规范审查等多 agent 并行场景 |
 
 类型目录：`hooks/` · `workflows/` · `agents/` 已预留，按需生长
 
@@ -114,6 +119,10 @@ npm run lab:switch deepseek       # 切换到 deepseek
 | 你的目标 | 推荐路径 |
 | --- | --- |
 | 想创建新技能/命令 | `/skill-forge "创建一个 xxx"` |
+| 想按规范整理/修复代码注释 | `/comment-keeper`（可指定文件/目录/函数） |
+| 想补充/修复单元测试 | `/test-keeper`（可指定模块/目录） |
+| 想定位前端 bug | `/live-debugger "bug 描述与复现步骤"` |
+| 想快速验证功能/新改动 | `/quick-start "验证诉求与预期结果"` |
 | 想管理多模型配置 | `npm run lab:switch <profile>` |
 | 想用规范驱动开发 | `npm run lab:deploy openspec`，然后 `/opsx:propose` |
 | 想查看有哪些可用模块 | `npm run lab:list` |

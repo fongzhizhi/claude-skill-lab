@@ -1,7 +1,5 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 # claude-skill-lab
 
 Claude Code 扩展能力的个人研发工作台：在仓库中锻造 skill / agent / command / rule / hook / workflow / suite，一条命令覆盖部署到 `~/.claude/`。核心原则：**仓库是工作台，本地是生产环境**——成品在仓库锻造，`lab` 直接覆盖部署（不备份、不交互），问题回流仓库迭代。
@@ -90,3 +88,5 @@ npm run lab:switch <profile>   # 切换模型配置（--ephemeral 仅当前会�
 - 模块名：英文小写、短横线分隔（如 `commit-draft`）
 - 当前开发环境为 Windows（win32）；`{HOME}`、`{VSCodeSettings}` 等路径变量由 CLI 按平台运行时解析
 - 仓库语言为中文，模块文档与对话保持中文
+- 提交遵循 Conventional Commits（`feat` / `fix` / `docs` / `chore` 等 + 中文 subject），可用 `/commit-draft` 基于暂存区生成
+- 新增/移除模块或改模块说明时，同步更新 README「当前状态」章节（🟢 已部署 / 🟡 规划中表格）——状态章节容易滞后于实际模块，以模块目录为准
