@@ -1,0 +1,16 @@
+{
+  "dependencies": [
+    {
+      "name": "TS 测试规范指南文档",
+      "check": "node -e \"const os=require('os'),fs=require('fs');process.exit(fs.existsSync(os.homedir()+'/.claude/docs/ts-testing-guide.md')?0:1)\"",
+      "install": "lab deploy docs/ts-code-guide",
+      "required": false
+    },
+    {
+      "name": "openspec CLI",
+      "check": "openspec --version",
+      "install": "npm install -g @fission-ai/openspec@latest",
+      "required": false
+    }
+  ]
+}
