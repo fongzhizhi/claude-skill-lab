@@ -1,0 +1,10 @@
+{
+  "dependencies": [
+    {
+      "name": "TS 注释规范指南文档",
+      "check": "node -e \"const os=require('os'),fs=require('fs');process.exit(fs.existsSync(os.homedir()+'/.claude/docs/ts-comments-guide.md')?0:1)\"",
+      "install": "lab deploy docs/ts-code-guide",
+      "required": false
+    }
+  ]
+}
