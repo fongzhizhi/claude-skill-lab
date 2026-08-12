@@ -1,0 +1,10 @@
+{
+  "dependencies": [
+    {
+      "name": "浏览器控制 MCP（chrome-devtools / playwright / puppeteer 任一）",
+      "check": "node -e \"const os=require('os'),fs=require('fs'),path=require('path');const files=[path.join(os.homedir(),'.claude.json'),path.join(process.cwd(),'.mcp.json')];const names=[];for(const f of files){if(!fs.existsSync(f))continue;try{const j=JSON.parse(fs.readFileSync(f,'utf8'));names.push(...Object.keys(j.mcpServers||{}));for(const k of Object.keys(j.projects||{}))names.push(...Object.keys((j.projects[k].mcpServers)||{}));}catch(e){}}process.exit(names.some(n=>/chrome|devtool|playwright|puppeteer/i.test(n))?0:1)\"",
+      "install": "在 Claude Code 中运行 /mcp 添加浏览器控制服务（如 npx chrome-devtools-mcp@latest），重启会话后生效",
+      "required": false
+    }
+  ]
+}
