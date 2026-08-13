@@ -19,3 +19,7 @@ paths: "**/*.ts, **/*.tsx"
 - 无意义缩写（`usr`、`btn`），除非行业通用（`id`、`url`、`http`）
 - 单字母变量名（循环计数器 `i` 除外）
 - 冗余前缀/后缀（`userService` 内的 `userData`、`Data` 后缀堆叠）
+
+## 参考文档
+
+详细指南（命名规约全量表、ESLint/Prettier 自动化兜底配置、反模式示例）请查阅：`~/.claude/docs/ts-coding-style-guide.md`

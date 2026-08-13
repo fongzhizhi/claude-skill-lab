@@ -89,6 +89,9 @@ npm run lab:switch deepseek       # 切换到 deepseek
 | --- | --- | --- |
 | **[skill-forge](skills/skill-forge/README.md)** | skill | 创建、维护、迭代所有模块（单模块 + 聚合套件） |
 | **[comment-keeper](skills/comment-keeper/README.md)** | skill | 按 TS 注释规范统一调整代码注释（核对/增删改/补录，必要时重构自解释） |
+| **[style-keeper](skills/style-keeper/README.md)** | skill | 按编码风格规范统一命名与常量：ESLint/Prettier 自动兜底，改名安全分级 |
+| **[type-keeper](skills/type-keeper/README.md)** | skill | 按类型安全规范修复类型漏洞：清 any / @ts-ignore / 非空断言，tsc 全绿门禁 |
+| **[error-handling-keeper](skills/error-handling-keeper/README.md)** | skill | 按错误处理规范修复存量代码：语义等价直接做，控制流改动列清单 |
 | **[test-keeper](skills/test-keeper/README.md)** | skill | 按测试规范补充与修复单元测试：无测试走方案，有测试审质量 |
 | **[live-debugger](skills/live-debugger/README.md)** | skill | 模拟人工 debugger 流程定位前端 bug：埋点 → 复现 → 收敛 → 修复清理 |
 | **[quick-start](skills/quick-start/README.md)** | skill | 快速验证功能/新改动：注入入口与数据，验证后清场恢复原状 |
@@ -97,7 +100,7 @@ npm run lab:switch deepseek       # 切换到 deepseek
 | **[mojibake-fixer](commands/mojibake-fixer/README.md)** | command | 修复 AI 生成内容中的乱码（U+FFFD 等） |
 | **[session-review](commands/session-review/README.md)** | command | 生成技术复盘报告（背景、根因、方案、验证） |
 | **[ts-standards](rules/ts-standards/README.md)** | rules | 5 条 TS 必备规则（注释/风格/类型/错误处理/测试），路径作用域自动生效 |
-| **[ts-code-guide](docs/ts-code-guide/README.md)** | docs | TS 规范参考文档（注释 + 测试指南）→ `~/.claude/docs/`，按需引用不占上下文 |
+| **[ts-code-guide](docs/ts-code-guide/README.md)** | docs | TS 规范参考文档（注释/风格/类型/错误处理/测试 5 份指南）→ `~/.claude/docs/`，按需引用不占上下文 |
 | **[openspec](suites/openspec/README.md)** | suite | 6 个 `/opsx:*` 斜杠命令，规范驱动开发（需全局安装 `openspec` CLI） |
 | **[settings](settings/README.md)** | settings | 多模型切换（`_base.json` + profiles 合并），VSCode 配置部署 |
 
@@ -105,7 +108,6 @@ npm run lab:switch deepseek       # 切换到 deepseek
 
 | 方向 | 说明 |
 | --- | --- |
-| **keeper 补齐** | `style-keeper` / `type-keeper` / `error-handling-keeper`，补齐 ts-standards 5 条规则的执行闭环 |
 | **hooks 落地** | 部署后自动核对一致性、提交前提醒等自动化 hook |
 | **agents 子代理** | 规范审查专用代理，主对话只拿结论，省上下文 |
 | **workflows 编排** | 批量重构 / 批量规范审查等多 agent 并行场景 |
@@ -120,6 +122,9 @@ npm run lab:switch deepseek       # 切换到 deepseek
 | --- | --- |
 | 想创建新技能/命令 | `/skill-forge "创建一个 xxx"` |
 | 想按规范整理/修复代码注释 | `/comment-keeper`（可指定文件/目录/函数） |
+| 想统一命名/清理魔法数字 | `/style-keeper`（可指定文件/目录） |
+| 想修复类型安全漏洞 | `/type-keeper`（可指定文件/目录） |
+| 想修复错误处理问题 | `/error-handling-keeper`（可指定文件/目录） |
 | 想补充/修复单元测试 | `/test-keeper`（可指定模块/目录） |
 | 想定位前端 bug | `/live-debugger "bug 描述与复现步骤"` |
 | 想快速验证功能/新改动 | `/quick-start "验证诉求与预期结果"` |

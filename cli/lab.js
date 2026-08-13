@@ -50,6 +50,27 @@ function matchPattern(file, pattern) {
   return file === pattern;
 }
 
+// 自然排序：数字段按数值比较（name-2 < name-10），其余按字典序
+function naturalCompare(a, b) {
+  const partsA = a.match(/\d+|\D+/g) || [a];
+  const partsB = b.match(/\d+|\D+/g) || [b];
+  const len = Math.min(partsA.length, partsB.length);
+  for (let i = 0; i < len; i++) {
+    const x = partsA[i];
+    const y = partsB[i];
+    const isNumX = /^\d+$/.test(x);
+    const isNumY = /^\d+$/.test(y);
+    if (isNumX && isNumY) {
+      const diff = parseInt(x, 10) - parseInt(y, 10);
+      if (diff !== 0) return diff;
+    } else {
+      const cmp = x < y ? -1 : x > y ? 1 : 0;
+      if (cmp !== 0) return cmp;
+    }
+  }
+  return partsA.length - partsB.length;
+}
+
 function copyDir(src, dest) {
   if (!fs.existsSync(src)) return false;
   if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
@@ -554,10 +575,19 @@ function cmdStatus() {
 
   const modules = findModules();
 
-  // 检查单模块
-  const typeNames = Object.keys(modules.types).sort();
-  for (const name of typeNames) {
+  // 检查单模块：按类型分组（TYPES 顺序，同类相邻），组内按命名自然排序
+  const byType = new Map();
+  for (const name of Object.keys(modules.types)) {
     for (const type of modules.types[name]) {
+      if (!byType.has(type)) byType.set(type, []);
+      byType.get(type).push(name);
+    }
+  }
+  for (const type of TYPES) {
+    const names = byType.get(type);
+    if (!names) continue;
+    names.sort(naturalCompare);
+    for (const name of names) {
       // 镜像核对：dist/ 相对路径逐一对应 ~/.claude/（全量镜像）
       const distPath = path.join(ROOT, type, name, "dist");
       const { deployed, missing } = checkDistMirror(distPath, CLAUDE_ROOT);
@@ -573,7 +603,7 @@ function cmdStatus() {
   }
 
   // 检查套件：按 manifest 逐条核对目标文件（与部署逻辑对称）
-  const suiteNames = Object.keys(modules.suites).sort();
+  const suiteNames = Object.keys(modules.suites).sort(naturalCompare);
   for (const name of suiteNames) {
     const suitePath = modules.suites[name];
     const manifestPath = path.join(suitePath, "manifest.json");
@@ -614,7 +644,7 @@ function cmdStatus() {
     }
   }
 
-  if (typeNames.length === 0 && suiteNames.length === 0) {
+  if (Object.keys(modules.types).length === 0 && suiteNames.length === 0) {
     log("  (无)");
   }
 }

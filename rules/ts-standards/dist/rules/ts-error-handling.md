@@ -19,3 +19,7 @@ paths: "**/*.ts, **/*.tsx"
 - 空 `catch {}`（连日志都不写）
 - 用 `console.log` 代替错误日志（统一走项目日志体系；无日志体系时至少 `console.error`）
 - 在循环内 catch 后继续忽略错误（应记录并决定中断或跳过）
+
+## 参考文档
+
+详细指南（错误分层与分类、传播与包装、日志规范、审查清单）请查阅：`~/.claude/docs/ts-error-handling-guide.md`
