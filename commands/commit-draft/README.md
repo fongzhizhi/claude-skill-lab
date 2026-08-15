@@ -9,7 +9,7 @@
 | 能力 | 说明 |
 | --- | --- |
 | 自动总结 | 暂存区变更优先（无暂存则回退全部变更），自动归纳改动 |
-| 上下文补全 | 结合会话中的需求/bug 与参数链接，补充 commit 背景便于溯源；ONES 单追加 `Title: <ID> <标题>`（git trailer，可按单号 `git log --grep` 检索）+ `Refs: <纯链接>` |
+| 上下文补全 | 结合会话中的需求/bug 与参数链接，补充 commit 背景便于溯源；链接含明细 ID 时追加到 subject 末尾 `(ID)`（如 `feat: 新增参考点切换 (PRO-156328)`）便于 `git log --oneline` 快速定位；ONES 单追加 `Title: <ID> <标题>`（git trailer，可按单号 `git log --grep` 检索）+ `Refs: <纯链接>` |
 | 规范输出 | 严格遵循 Conventional Commits 结构，单代码块输出直接复制 |
 
 ## 信息优先级

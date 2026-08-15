@@ -2,6 +2,11 @@
 
 <!-- 记录使用过程中发现的问题与改进建议。 -->
 
+## 2026-08-15
+
+- **反馈**：链接中带有明细 ID 时（如 ONES 链接的 hash 末尾就是单 ID），commit title 应带上 ID，`git log --oneline` 即可快速定位，不必展开 footer 看 `Title:` 行。
+- **处理**：v0.1.5 新增"链接 ID 提取规则"——ONES 单取 `PRO-xxx` 等前缀 ID、GitHub issue 等链接尾部数字取 `#数字`，追加到 subject 末尾 `(ID)`；footer `Title`/`Refs` 保持不变。ID 后缀不计入 subject 50 字符主体限制，整条 ≤72。
+
 ## 2026-08-10
 
 - **反馈（ones-parser）**：ONES ID 前缀无法可靠区分单是需求还是缺陷，类型分析应去掉（与标题无关）。

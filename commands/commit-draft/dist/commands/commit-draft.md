@@ -19,13 +19,22 @@ category: git
 **第 2 优先级 —— 会话上下文**
 
 - 从当前会话中提取与本次改动相关的信息：正在写的需求、修的 bug、改动涉及的文件与说明。
-- 会话中提到的需求 ID、bug 编号、ticket 链接等，作为补充信息加入 commit（便于溯源）。
-- 会话中出现 ONES 单粘贴内容（如 `PRO-156328 【需求测试】... http://ones.xxx.com/project/#/team/xxx/issue/PRO-156328`）时，按下方"ONES 单解析规则"解析出单 ID / 类型 / 标题 / 链接，写入 footer。
+- 会话中提到的需求 ID、bug 编号、ticket 链接等，作为补充信息加入 commit（便于溯源）；链接中含明细 ID 时，按下方"链接 ID 提取规则"将 ID 追加到 subject 末尾（便于快速定位）。
+- 会话中出现 ONES 单粘贴内容（如 `PRO-156328 【需求测试】... http://ones.xxx.com/project/#/team/xxx/issue/PRO-156328`）时，按下方"ONES 单解析规则"解析出单 ID / 标题 / 链接，ID 追加到 subject 末尾，完整信息写入 footer。
 
 **第 3 优先级 —— 命令参数**
 
 - 用户执行 `/commit-draft` 时附带的参数（如需求链接、相关说明），原样作为参考信息加入 commit。
-- 参数中的 ONES 单同样按"ONES 单解析规则"解析并写入 footer。
+- 参数中的链接同样按"链接 ID 提取规则"处理：ID 追加到 subject 末尾，完整链接写入 footer。
+
+## 链接 ID 提取规则
+
+会话或参数中的链接含明细 ID 时，提取并追加到 subject 末尾 `(ID)`，便于 `git log --oneline` 快速定位：
+
+- **ONES 单**：按下方"ONES 单解析规则"提取 `PRO-156328` 等带前缀 ID，直接使用。
+- **非 ONES 链接**：路径或 hash 尾部为纯数字时（如 GitHub issue），按 `#数字` 形式使用（如 `(#234)`）；无法可靠提取 ID 的链接不追加。
+- **多个 ID**：用 `, ` 分隔全部追加，如 `(PRO-156328, #234)`；超过 2 个时 subject 只保留前 2 个，其余 ID 仍写入 footer。
+- **不编造**：ID 只从真实链接中提取；提取不到时不追加，不影响 subject 原有内容。
 
 ## ONES 单解析规则
 
@@ -50,7 +59,7 @@ ONES 工单的解析规则与 `ones-parser` 技能保持一致：
 
 - **type**：feat（新功能）/ fix（修复）/ docs（文档）/ style（格式）/ refactor（重构）/ perf（性能）/ test（测试）/ build（构建）/ ci（CI）/ chore（杂项）/ revert（回滚），按实际改动归类。
 - **scope**：可选，填写受影响的功能模块或文件范围。
-- **subject**：动词开头、不超过 50 字符、结尾不加句号，概括本次改动。
+- **subject**：动词开头、主体不超过 50 字符、结尾不加句号，概括本次改动；链接解析出的 ID 追加在末尾 `(ID)`（如 `feat: 新增参考点切换 (PRO-156328)`），ID 后缀不计入 50 字符主体限制，整条 subject（含 ID）控制在 72 字符内，超长时只保留前 2 个 ID。
 - **body**：说明"做了什么 + 为什么"，简洁分段，不要罗列代码细节。
 - **footer**：存在需求/bug 来源时追加 `Refs: <链接或编号>`，如 `Refs: #123`、`Refs: https://example.com/ticket/123`。
 - **footer（ONES 单）**：来源为 ONES 单时，每单输出两行，`Title:` 在上、`Refs:` 在下（`Title:` 为 git trailer 格式，便于 `git log --grep=<单号>` 检索）：

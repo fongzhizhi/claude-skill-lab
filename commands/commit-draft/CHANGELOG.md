@@ -2,6 +2,11 @@
 
 <!-- 记录 commands/commit-draft/ 的每次变更。 -->
 
+## v0.1.5（2026-08-15）
+
+- 新增"链接 ID 提取规则"：链接中含明细 ID 时（ONES 单取 `PRO-xxx` 等带前缀 ID、GitHub issue 等链接尾部数字取 `#数字`），追加到 subject 末尾 `(ID)`，`git log --oneline` 可直接定位；多个 ID 用 `, ` 分隔，subject 最多保留前 2 个，其余仍进 footer。
+- subject 长度规则调整：主体 ≤50 字符不变，ID 后缀不计入主体限制，整条 subject（含 ID）控制在 72 字符内。
+
 ## v0.1.4（2026-08-10）
 
 - 调整 ONES footer 顺序与格式：`Title:` 行置于 `Refs:` 上方（更符合阅读习惯）；`Refs:` 只输出纯链接，不再拼 `ID (链接)`（单 ID 由 `Title:` 行体现）。
