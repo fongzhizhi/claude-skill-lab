@@ -35,7 +35,8 @@
       "Task",
       "TodoWrite",
       "ExitPlanMode",
-      "mcp__*"
+      "mcp__*",
+      "WebFetch(domain:*)"
     ],
     "deny": [
       "Bash(rm -rf *)",
