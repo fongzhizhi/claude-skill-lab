@@ -411,8 +411,8 @@ lab deploy suites/openspec    # 显式部署套件
 > 不采用固定顺序查找，避免未来类型增多时产生隐式优先级导致误部署。
 ### 执行约定
 
-- 所有命令在项目根目录执行
-- 通过 `node cli/lab.js` 直接调用，或通过 `npm run lab -- …`、shell 别名 `lab`
+- 推荐方式：仓库内 `npm run link` 注册全局命令 `claude-lab`，之后在**任意目录**执行（CLI 以自身脚本位置定位仓库，与当前目录无关）；上方命令总览中的 `lab xxx` 为 `claude-lab xxx` 的兼容别名
+- 也可在仓库内通过 `node cli/lab.js` 或 npm 脚本（`npm run deploy <name>` 等）调用
 - 退出码：0 成功，1 参数错误，2 文件操作失败
 - 部署前自动创建目标父目录
 

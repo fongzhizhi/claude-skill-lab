@@ -35,9 +35,21 @@
       "Task",
       "TodoWrite",
       "ExitPlanMode",
-      "mcp__*",
       "WebFetch",
-      "WebSearch"
+      "WebSearch",
+      "mcp__cdp__list_console_messages",
+      "mcp__cdp__list_pages",
+      "mcp__cdp__list_network_requests",
+      "mcp__cdp__evaluate_script",
+      "mcp__cdp_new_page",
+      "mcp__cdp_close_page",
+      "mcp__cdp_get_console_messages",
+      "mcp__cdp_navigate_page",
+      "mcp__cdp_take_screenshot",
+      "mcp__cdp_take_snapshot",
+      "mcp__cdp_take_screenshort",
+      "mcp__cdp_click",
+      "mcp__*"
     ],
     "deny": [
       "Bash(rm -rf *)",

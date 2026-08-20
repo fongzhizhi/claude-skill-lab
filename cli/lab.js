@@ -89,7 +89,7 @@ function copyDir(src, dest) {
 }
 
 // 镜像核对：srcDir 下所有文件按相对路径在 destRoot 下逐一检查，
-// 返回已部署数与缺失的相对路径列表（用于 lab status）
+// 返回已部署数与缺失的相对路径列表（用于 claude-lab status）
 function checkDistMirror(srcDir, destRoot) {
   let deployed = 0;
   const missing = [];
@@ -111,7 +111,7 @@ function checkDistMirror(srcDir, destRoot) {
   return { deployed, missing };
 }
 
-// 镜像删除：删除 destRoot 下与 srcDir 相对路径对应的文件（用于 lab remove）
+// 镜像删除：删除 destRoot 下与 srcDir 相对路径对应的文件（用于 claude-lab remove）
 function removeDistMirror(srcDir, destRoot) {
   const walk = (src, dest) => {
     const entries = fs.readdirSync(src, { withFileTypes: true });
@@ -222,7 +222,7 @@ function resolveModule(name) {
     }
     log(`  - suites/${name}`);
     log(
-      "请使用完整路径限定：lab deploy <type>/<name> 或 lab deploy suites/<name>",
+      "请使用完整路径限定：claude-lab deploy <type>/<name> 或 claude-lab deploy suites/<name>",
     );
     process.exit(1);
   }
@@ -232,7 +232,7 @@ function resolveModule(name) {
     for (const t of typeMatches) {
       log(`  - ${t}/${name}`);
     }
-    log("请使用 lab deploy <type>/<name> 显式指定");
+    log("请使用 claude-lab deploy <type>/<name> 显式指定");
     process.exit(1);
   }
 
@@ -452,7 +452,7 @@ function cmdDeploy(args) {
     } else if (a === "--switch") {
       switchProfile = args[++i];
       if (!switchProfile || switchProfile.startsWith("-")) {
-        error("--switch 需要一个 profile 名，如: lab deploy --all --switch deepseek");
+        error("--switch 需要一个 profile 名，如: claude-lab deploy --all --switch deepseek");
       }
     } else if (a.startsWith("--switch=")) {
       switchProfile = a.slice("--switch=".length);
@@ -482,11 +482,11 @@ function cmdDeploy(args) {
   }
 
   if (names.length === 0) {
-    log("用法: lab deploy <name>");
-    log("      lab deploy <type>/<name>");
-    log("      lab deploy suites/<name>");
-    log("      lab deploy --all");
-    log("      lab deploy --all --switch <profile>");
+    log("用法: claude-lab deploy <name>");
+    log("      claude-lab deploy <type>/<name>");
+    log("      claude-lab deploy suites/<name>");
+    log("      claude-lab deploy --all");
+    log("      claude-lab deploy --all --switch <profile>");
     process.exit(1);
   }
 
@@ -651,9 +651,9 @@ function cmdStatus() {
 
 function cmdRemove(args) {
   if (args.length === 0) {
-    log("用法: lab remove <name>");
-    log("      lab remove <type>/<name>");
-    log("      lab remove suites/<name>");
+    log("用法: claude-lab remove <name>");
+    log("      claude-lab remove <type>/<name>");
+    log("      claude-lab remove suites/<name>");
     process.exit(1);
   }
 
@@ -888,36 +888,37 @@ function cmdSwitch(args) {
 
 function showHelp() {
   log(`
-🔧 lab - Claude Skill Lab CLI
+🔧 claude-lab - Claude Skill Lab CLI
 
 用法:
-  lab                     显示帮助
-  lab list                列出所有可部署模块
-  lab status              显示本地部署状态
-  lab deploy <name>       部署模块 (自动推断)
-  lab deploy <type>/<name> 部署指定类型模块
-  lab deploy suites/<name> 部署聚合套件
-  lab deploy --all        一键部署所有模块
-  lab deploy --all --switch <profile>  一键部署并切换配置
-  lab remove <name>       卸载模块
-  lab switch              列出可用 profiles
-  lab switch <profile>    切换模型配置
-  lab switch <profile> --ephemeral  临时切换
+  claude-lab               显示帮助
+  claude-lab list          列出所有可部署模块
+  claude-lab status        显示本地部署状态
+  claude-lab deploy <name> 部署模块 (自动推断)
+  claude-lab deploy <type>/<name> 部署指定类型模块
+  claude-lab deploy suites/<name> 部署聚合套件
+  claude-lab deploy --all  一键部署所有模块
+  claude-lab deploy --all --switch <profile>  一键部署并切换配置
+  claude-lab remove <name> 卸载模块
+  claude-lab switch        列出可用 profiles
+  claude-lab switch <profile> 切换模型配置
+  claude-lab switch <profile> --ephemeral  临时切换
 
 示例:
-  lab deploy skill-forge
-  lab deploy commands/commit-draft
-  lab deploy --all --switch deepseek
-  lab switch deepseek
-  lab status
+  claude-lab deploy skill-forge
+  claude-lab deploy commands/commit-draft
+  claude-lab deploy --all --switch deepseek
+  claude-lab switch deepseek
+  claude-lab status
 `);
 }
 
 function main() {
   try {
     // npm run 兼容：npm 不把 `--` 前的 --flag 传给脚本，而是注入 npm_config_<flag>
-    // 环境变量（如 npm run lab:deploy --all → npm_config_all="true"）；位置参数则直接透传。
-    // 故从环境变量恢复 --all，保证 `npm run lab:deploy --all` 无需 `--` 分隔符即可生效。
+    // 环境变量（如 npm run deploy --all → npm_config_all="true"）；位置参数则直接透传。
+    // 故从环境变量恢复 --all，保证 `npm run deploy --all` 无需 `--` 分隔符即可生效。
+    // （全局命令 `claude-lab deploy --all` 参数直传，天然无此问题）
     if (
       process.env.npm_config_all === "true" &&
       !process.argv.includes("--all")
@@ -959,7 +960,7 @@ function main() {
         cmdSwitch(subArgs);
         break;
       default:
-        error(`未知命令: ${cmd}\n运行 lab 查看帮助`);
+        error(`未知命令: ${cmd}\n运行 claude-lab 查看帮助`);
     }
   } catch (e) {
     console.error("❌ " + e.message);

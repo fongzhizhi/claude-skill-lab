@@ -10,7 +10,7 @@
 
 ```
       仓库（工作台）                           本地（生产环境）
- ┌─────────────────────────────┐  lab deploy ┌───────────────────────────┐
+ ┌─────────────────────────────┐  claude-lab  ┌───────────────────────────┐
  │ skills/<n>/dist/            │ ──────────▶ │ ~/.claude/（镜像复制）     │
  │ commands/<n>/dist/          │ ──────────▶ │   dist/ 相对路径原样落位   │
  │ agents/ · rules/ · hooks/   │ ──────────▶ │   如 commands/foo.md →     │
@@ -39,12 +39,15 @@
 前置条件：Node.js 18+（Claude Code 自带）· 已安装 Claude Code
 
 ```bash
+# 0. 一次性注册全局命令 claude-lab（之后可在任意目录使用）
+npm run link
+
 # 1. 查看帮助与可用模块
-npm run lab
-npm run lab:list
+claude-lab
+claude-lab list
 
 # 2. 一键部署所有模块（主流程，一条命令全部就位）
-npm run lab:deploy --all
+claude-lab deploy --all
 #    skill / command / rules / docs / suite / settings 一次落位
 #    技能依赖的 docs / rules 会一并携带，无需逐个部署
 
@@ -52,34 +55,36 @@ npm run lab:deploy --all
 #    /skill-forge "创建一个用于整理 Git commit 的技能，叫 commit-draft"
 
 # 4. 开发完成后，只重新部署迭代过的模块（没必要全量重来）
-npm run lab:deploy commit-draft   # 之后对话中输入 /commit-draft 即可使用
+claude-lab deploy commit-draft   # 之后对话中输入 /commit-draft 即可使用
 
 # 5. 切换模型配置
-npm run lab:switch                # 列出可用 profiles
-npm run lab:switch deepseek       # 切换到 deepseek
+claude-lab switch                # 列出可用 profiles
+claude-lab switch deepseek       # 切换到 deepseek
 ```
 
-> **主流程是一键部署，而不是逐个部署。** 技能不是孤立的——`comment-keeper` / `test-keeper` 等运行时依赖 `docs/`（规范指南）与 `rules/`（强制规则）两个独立模块，`lab:deploy <name>` 只部署目标模块本身、不携带这些依赖；只有 `lab:deploy --all` 才把全部模块一次落位。**单独部署是开发完成后的迭代动作**：`/skill-forge` 改完某个模块后，只重新部署那一个，避免全量覆盖。
+> **主流程是一键部署，而不是逐个部署。** 技能不是孤立的——`comment-keeper` / `test-keeper` 等运行时依赖 `docs/`（规范指南）与 `rules/`（强制规则）两个独立模块，`claude-lab deploy <name>` 只部署目标模块本身、不携带这些依赖；只有 `claude-lab deploy --all` 才把全部模块一次落位。**单独部署是开发完成后的迭代动作**：`/skill-forge` 改完某个模块后，只重新部署那一个，避免全量覆盖。仓库内也可用 npm 脚本薄封装：`npm run deploy <name>`、`npm run switch <profile>` 等（见下方指令参考）。
 
 > 不满意？直接在对话中对 `skill-forge` 说："commit-draft 生成的 message 太长了，改成不超过 50 个字符"。`skill-forge` 自动更新文档、修改成品并提示重新部署，全程无需手动编辑任何 markdown。
 
 ## 指令参考
 
+全局命令 `claude-lab`（`npm run link` 注册后任意目录可用，等价于 `node cli/lab.js`）：
+
 | 命令 | 说明 |
 | --- | --- |
-| `lab` | 显示帮助 |
-| `lab:list` | 列出所有可部署模块（含套件） |
-| `lab:status` | 显示本地部署状态 |
-| `lab:deploy <name>` | 部署（类型自动推断） |
-| `lab:deploy <type>/<name>` | 同名冲突时显式限定 |
-| `lab:deploy suites/<name>` | 部署聚合套件 |
-| `lab:deploy --all` | 一键部署所有模块 |
-| `lab:remove <name>` | 卸载已部署模块 |
-| `lab:switch` | 列出可用 profiles |
-| `lab:switch <profile>` | 切换模型配置 |
-| `lab:switch <profile> --ephemeral` | 仅当前会话生效 |
+| `claude-lab` | 显示帮助 |
+| `claude-lab list` | 列出所有可部署模块（含套件） |
+| `claude-lab status` | 显示本地部署状态 |
+| `claude-lab deploy <name>` | 部署（类型自动推断） |
+| `claude-lab deploy <type>/<name>` | 同名冲突时显式限定 |
+| `claude-lab deploy suites/<name>` | 部署聚合套件 |
+| `claude-lab deploy --all` | 一键部署所有模块 |
+| `claude-lab remove <name>` | 卸载已部署模块 |
+| `claude-lab switch` | 列出可用 profiles |
+| `claude-lab switch <profile>` | 切换模型配置 |
+| `claude-lab switch <profile> --ephemeral` | 仅当前会话生效 |
 
-> 也可直接调用 `node cli/lab.js`。
+仓库内 npm 脚本为同一 CLI 的薄封装：`npm run lab`（帮助）、`npm run list` / `status` / `deploy <name>` / `remove <name>` / `switch <profile>`。`npm run deploy --all` 无需 `--` 分隔符（CLI 从 `npm_config_all` 等环境变量恢复标志）。
 
 ## 当前状态
 
@@ -128,9 +133,9 @@ npm run lab:switch deepseek       # 切换到 deepseek
 | 想补充/修复单元测试 | `/test-keeper`（可指定模块/目录） |
 | 想定位前端 bug | `/live-debugger "bug 描述与复现步骤"` |
 | 想快速验证功能/新改动 | `/quick-start "验证诉求与预期结果"` |
-| 想管理多模型配置 | `npm run lab:switch <profile>` |
-| 想用规范驱动开发 | `npm run lab:deploy openspec`，然后 `/opsx:propose` |
-| 想查看有哪些可用模块 | `npm run lab:list` |
+| 想管理多模型配置 | `claude-lab switch <profile>` |
+| 想用规范驱动开发 | `claude-lab deploy openspec`，然后 `/opsx:propose` |
+| 想查看有哪些可用模块 | `claude-lab list` |
 
 ## 参考
 

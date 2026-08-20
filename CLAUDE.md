@@ -8,17 +8,25 @@ Claude Code 扩展能力的个人研发工作台：在仓库中锻造 skill / ag
 
 无构建、无 lint、无测试（验证方式 = 部署后在 Claude Code 对话中实际使用）。CLI 是零依赖的纯 Node.js 单文件，Node 18+。
 
+首次使用注册全局命令（一次性，指向仓库源码的软链，改代码即时生效）：
+
 ```bash
-npm run lab                    # 帮助
-npm run lab:list               # 列出所有可部署模块（单模块 + 套件）
-npm run lab:status             # 显示本地部署状态
-npm run lab:deploy <name>      # 部署（类型自动推断；冲突时用 type/name 或 suites/name 显式限定）
-npm run lab:deploy --all       # 一键部署所有（--force 跳过依赖检查；--switch <profile> 部署后切换配置）
-npm run lab:remove <name>      # 卸载
-npm run lab:switch <profile>   # 切换模型配置（--ephemeral 仅当前会话，不写磁盘）
+npm run link                  # 注册全局命令 claude-lab（npm link）；npm run unlink 可移除
 ```
 
-等价于 `node cli/lab.js`。`npm run lab:deploy --all` 无需 `--` 分隔符——CLI 会从 `npm_config_all`/`npm_config_force` 环境变量恢复 npm 消费掉的标志（见 `lab.js` 的 `main()`）。
+之后在**任意目录**用全局命令 `claude-lab` 操作（等价于 `node cli/lab.js`，仓库定位与当前目录无关）：
+
+```bash
+claude-lab                    # 帮助
+claude-lab list               # 列出所有可部署模块（单模块 + 套件）
+claude-lab status             # 显示本地部署状态
+claude-lab deploy <name>      # 部署（类型自动推断；冲突时用 type/name 或 suites/name 显式限定）
+claude-lab deploy --all       # 一键部署所有（--force 跳过依赖检查；--switch <profile> 部署后切换配置）
+claude-lab remove <name>      # 卸载
+claude-lab switch <profile>   # 切换模型配置（--ephemeral 仅当前会话，不写磁盘）
+```
+
+仓库内也保留 npm 脚本薄封装：`npm run lab`（帮助）、`npm run deploy <name>`、`npm run switch <profile>`、`npm run list` / `status` / `remove`。`npm run deploy --all` 无需 `--` 分隔符——CLI 会从 `npm_config_all`/`npm_config_force` 环境变量恢复 npm 消费掉的标志（见 `lab.js` 的 `main()`）；全局命令 `claude-lab deploy --all` 参数直传，天然无此问题。
 
 ## 架构
 
@@ -32,7 +40,7 @@ npm run lab:switch <profile>   # 切换模型配置（--ephemeral 仅当前会�
 每个模块目录统一结构（skill-forge 生成，见 [skills/skill-forge/dist/skills/skill-forge/SKILL.md](skills/skill-forge/dist/skills/skill-forge/SKILL.md)）：
 
 - 根目录：`README.md`、`design.md`、`CHANGELOG.md`、`feedback.md` —— 文档，由 skill-forge 维护
-- `dist/` —— **成品目录，与 `~/.claude/` 相对路径一一对应（镜像结构），`lab deploy` 唯一关注的地方**，所有文件按相对路径原样递归复制
+- `dist/` —— **成品目录，与 `~/.claude/` 相对路径一一对应（镜像结构），`claude-lab deploy` 唯一关注的地方**，所有文件按相对路径原样递归复制
 - `meta.json` —— 可选，声明外部 CLI 前置依赖
 
 ### 部署形态（cli/lab.js 核心逻辑）
@@ -45,7 +53,7 @@ npm run lab:switch <profile>   # 切换模型配置（--ephemeral 仅当前会�
 
 ### 聚合套件 manifest.json
 
-每条 `mappings`：`source` 是 `dist/` 内的相对路径（支持 `*`、`*.ext` 简单模式），`target` 是目标路径模板（支持 `{HOME}`，运行时由 `os.homedir()` 解析）；target 以 `/` 结尾视为目录。`lab status` 与 `lab remove` 按同一套 mappings 对称核对/删除。
+每条 `mappings`：`source` 是 `dist/` 内的相对路径（支持 `*`、`*.ext` 简单模式），`target` 是目标路径模板（支持 `{HOME}`，运行时由 `os.homedir()` 解析）；target 以 `/` 结尾视为目录。`claude-lab status` 与 `claude-lab remove` 按同一套 mappings 对称核对/删除。
 
 ### meta.json 前置依赖机制
 
@@ -55,7 +63,7 @@ npm run lab:switch <profile>   # 切换模型配置（--ephemeral 仅当前会�
 { "dependencies": [{ "name": "openspec CLI", "check": "openspec --version", "install": "npm install -g @fission-ai/openspec@latest", "required": true }] }
 ```
 
-`lab deploy` 逐个执行 `check` 命令：缺失且 `required: true`（默认）时拦截部署，`--force` 可跳过；`required: false` 只提示不拦截。**迭代模块时，成品文件增减了外部工具调用必须同步维护 `meta.json`。**
+`claude-lab deploy` 逐个执行 `check` 命令：缺失且 `required: true`（默认）时拦截部署，`--force` 可跳过；`required: false` 只提示不拦截。**迭代模块时，成品文件增减了外部工具调用必须同步维护 `meta.json`。**
 
 ### 顶层 manifest.json 与新增类型
 
@@ -76,12 +84,12 @@ npm run lab:switch <profile>   # 切换模型配置（--ephemeral 仅当前会�
 
 - **不要手动编辑模块文档**（README/design/CHANGELOG/feedback）——由 skill-forge 在对话中维护
 - 需求变更时直接修改 `dist/` 成品文件，由 skill-forge 同步文档、递增 CHANGELOG 版本、维护 `meta.json`
-- 典型流程：`/skill-forge "创建/修改 xxx"` → `npm run lab:deploy <name>` → 对话中实测 → 反馈迭代
+- 典型流程：`/skill-forge "创建/修改 xxx"` → `claude-lab deploy <name>` → 对话中实测 → 反馈迭代
 - 接管外部导入的模块：补全文档，核对/生成 `manifest.json`（套件）与 `meta.json`
 
 ### 部署与验证
 
-修改 `dist/` 后运行 `npm run lab:deploy <name>` 覆盖部署。仓库内唯一"测试"是部署后在 Claude Code 中实际使用该模块；`lab status` 可核对本地与仓库的一致性。
+修改 `dist/` 后运行 `claude-lab deploy <name>` 覆盖部署。仓库内唯一"测试"是部署后在 Claude Code 中实际使用该模块；`claude-lab status` 可核对本地与仓库的一致性。
 
 ## 约定
 

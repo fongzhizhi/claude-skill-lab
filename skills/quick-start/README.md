@@ -29,6 +29,6 @@ lab deploy quick-start
 - 注入手段选择矩阵：入口深 → 快捷入口；依赖数据 → mock；特定状态 → 硬编码；验证数据 → 埋点
 - 注入代码统一打标：单行埋点 `console.log('[quick-start][<context>]', { vars })`；多行代码块用 `// [quick-start] begin/end` 标记对包裹，收尾按标记精确清除
 - 可逆性原则：注入必须局部、可逆，清理后代码行为完全恢复；收尾 grep 确认 `[quick-start]` 零残留
-- 默认页面 URL：`http://localhost/editor?cll=debugger`（用户提供 URL 时优先）
+- 默认页面 URL：`http://localhost/editor?cll=debug`（用户提供 URL 时优先）
 
 示例：`/quick-start "验证导出 Excel 功能，但菜单入口没做好，直接帮我触发并确认导出的数据对不对"` → 注入触发入口 + mock 数据 + 埋点 → 刷新页面 → 用户确认 → 收集数据比对 → 符合预期后清场并输出验证报告。
