@@ -37,19 +37,7 @@
       "ExitPlanMode",
       "WebFetch",
       "WebSearch",
-      "mcp__cdp__list_console_messages",
-      "mcp__cdp__list_pages",
-      "mcp__cdp__list_network_requests",
-      "mcp__cdp__evaluate_script",
-      "mcp__cdp__new_page",
-      "mcp__cdp__close_page",
-      "mcp__cdp__get_console_messages",
-      "mcp__cdp__navigate_page",
-      "mcp__cdp__take_screenshot",
-      "mcp__cdp__take_snapshot",
-      "mcp__cdp__take_screenshort",
-      "mcp__cdp__click",
-      "mcp__*"
+      "mcp__cdp__*"
     ],
     "deny": [
       "Bash(rm -rf *)",
