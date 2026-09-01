@@ -98,7 +98,7 @@ claude-lab switch deepseek       # 切换到 deepseek
 | **[type-keeper](skills/type-keeper/README.md)** | skill | 按类型安全规范修复类型漏洞：清 any / @ts-ignore / 非空断言，tsc 全绿门禁 |
 | **[error-handling-keeper](skills/error-handling-keeper/README.md)** | skill | 按错误处理规范修复存量代码：语义等价直接做，控制流改动列清单 |
 | **[test-keeper](skills/test-keeper/README.md)** | skill | 按测试规范补充与修复单元测试：无测试走方案，有测试审质量 |
-| **[live-debugger](skills/live-debugger/README.md)** | skill | 模拟人工 debugger 流程定位前端 bug：埋点 → 复现 → 收敛 → 修复清理 |
+| **[live-debugger](skills/live-debugger/README.md)** | skill | 模拟人工 debugger 流程定位前端 bug：埋点 → 自动复现（Playwright MCP 优先）→ 收敛 → 修复清理 |
 | **[quick-start](skills/quick-start/README.md)** | skill | 快速验证功能/新改动：注入入口与数据，验证后清场恢复原状 |
 | **[ones-parser](skills/ones-parser/README.md)** | skill | 解析 ONES 平台复制的工单内容（ID / 标题 / 链接），作为 commit 引用的单一事实来源 |
 | **[month-log-summary](skills/month-log-summary/README.md)** | skill | 为 month-log 月日志补写「AI月总结」章节：仓库自动定位，三种指定方式，已存在即覆盖 |
@@ -132,7 +132,7 @@ claude-lab switch deepseek       # 切换到 deepseek
 | 想修复类型安全漏洞 | `/type-keeper`（可指定文件/目录） |
 | 想修复错误处理问题 | `/error-handling-keeper`（可指定文件/目录） |
 | 想补充/修复单元测试 | `/test-keeper`（可指定模块/目录） |
-| 想定位前端 bug | `/live-debugger "bug 描述与复现步骤"` |
+| 想定位前端 bug | `/live-debugger "复现步骤 + 现状 + 预期"` |
 | 想快速验证功能/新改动 | `/quick-start "验证诉求与预期结果"` |
 | 想管理多模型配置 | `claude-lab switch <profile>` |
 | 想用规范驱动开发 | `claude-lab deploy openspec`，然后 `/opsx:propose` |

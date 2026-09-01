@@ -61,6 +61,12 @@
         "chrome-devtools-mcp@latest",
         "--autoConnect"
       ]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ]
     }
   }
 }
