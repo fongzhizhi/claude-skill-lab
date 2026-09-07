@@ -3,7 +3,7 @@
     {
       "name": "浏览器控制 MCP（playwright 优先，chrome-devtools / puppeteer 兜底）",
       "check": "node -e \"const os=require('os'),fs=require('fs'),path=require('path');const files=[path.join(os.homedir(),'.claude.json'),path.join(process.cwd(),'.mcp.json'),path.join(os.homedir(),'.claude','settings.json'),path.join(os.homedir(),'.claude','settings.local.json'),path.join(process.cwd(),'.claude','settings.json'),path.join(process.cwd(),'.claude','settings.local.json')];const names=[];for(const f of files){if(!fs.existsSync(f))continue;try{const j=JSON.parse(fs.readFileSync(f,'utf8'));names.push(...Object.keys(j.mcpServers||{}));for(const k of Object.keys(j.projects||{}))names.push(...Object.keys((j.projects[k].mcpServers)||{}));}catch(e){}}process.exit(names.some(n=>/chrome|devtool|playwright|puppeteer/i.test(n))?0:1)\"",
-      "install": "在 Claude Code 中运行 /mcp 添加 playwright（npx @playwright/mcp@latest，快照省 token、交互确定，最适合自动复现）或 chrome-devtools-mcp@latest，重启会话后生效",
+      "install": "在 Claude Code 中运行 /mcp 添加 playwright（npx @playwright/mcp@latest，快照省 token、读取 console 稳定，自动复现按需时也是首选）或 chrome-devtools-mcp@latest，重启会话后生效",
       "required": false
     }
   ]
