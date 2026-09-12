@@ -886,6 +886,43 @@ function cmdSwitch(args) {
 // 主入口
 // ============================================
 
+function cmdGitInit() {
+  // 初始化 ~/.claude 的本地 git 追踪（仅本地，不推送远程）。
+  // 与 switch 覆盖 settings.json 同款语义：gitinit 把仓库 gitinit/.gitignore.template
+  // 覆盖到 ~/.claude/.gitignore；迭代方式 = 改模板 → 重新 gitinit
+  if (!fs.existsSync(CLAUDE_ROOT)) {
+    error(
+      `~/.claude 不存在（${CLAUDE_ROOT}），请先执行 claude-lab deploy 或首次启动 Claude Code`
+    );
+  }
+
+  const gitDir = path.join(CLAUDE_ROOT, ".git");
+  if (fs.existsSync(gitDir)) {
+    log("ℹ️  已存在 .git 仓库，跳过 git init");
+  } else {
+    execSync("git init", { cwd: CLAUDE_ROOT, stdio: "inherit" });
+    success("git init 完成");
+  }
+
+  const templatePath = path.join(ROOT, "gitinit", ".gitignore.template");
+  if (!fs.existsSync(templatePath)) {
+    error(`缺少模板文件: ${templatePath}`);
+  }
+  const gitignorePath = path.join(CLAUDE_ROOT, ".gitignore");
+  fs.writeFileSync(
+    gitignorePath,
+    fs.readFileSync(templatePath, "utf-8"),
+    "utf-8"
+  );
+  success(`已覆盖 .gitignore（来自 ${path.relative(ROOT, templatePath)}）`);
+
+  log("");
+  log("建立追踪基线（一次性）:");
+  log(`  cd ${CLAUDE_ROOT} && git add -A && git commit -m "chore: 初始化 ~/.claude 本地 git 追踪"`);
+  log("");
+  info("之后 claude-lab deploy/switch 造成的文件变化，用 git status / git diff 即可追踪");
+}
+
 function showHelp() {
   log(`
 🔧 claude-lab - Claude Skill Lab CLI
@@ -903,6 +940,7 @@ function showHelp() {
   claude-lab switch        列出可用 profiles
   claude-lab switch <profile> 切换模型配置
   claude-lab switch <profile> --ephemeral  临时切换
+  claude-lab gitinit       初始化 ~/.claude 本地 git 追踪（git init + .gitignore）
 
 示例:
   claude-lab deploy skill-forge
@@ -958,6 +996,9 @@ function main() {
         break;
       case "switch":
         cmdSwitch(subArgs);
+        break;
+      case "gitinit":
+        cmdGitInit();
         break;
       default:
         error(`未知命令: ${cmd}\n运行 claude-lab 查看帮助`);

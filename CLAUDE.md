@@ -24,6 +24,7 @@ claude-lab deploy <name>      # 部署（类型自动推断；冲突时用 type/
 claude-lab deploy --all       # 一键部署所有（--force 跳过依赖检查；--switch <profile> 部署后切换配置）
 claude-lab remove <name>      # 卸载
 claude-lab switch <profile>   # 切换模型配置（--ephemeral 仅当前会话，不写磁盘）
+claude-lab gitinit            # 覆盖 ~/.claude/.gitignore（来自 gitinit/.gitignore.template 模板，同 switch 覆盖 settings.json）
 ```
 
 仓库内也保留 npm 脚本薄封装：`npm run lab`（帮助）、`npm run deploy <name>`、`npm run switch <profile>`、`npm run list` / `status` / `remove`。`npm run deploy --all` 无需 `--` 分隔符——CLI 会从 `npm_config_all`/`npm_config_force` 环境变量恢复 npm 消费掉的标志（见 `lab.js` 的 `main()`）；全局命令 `claude-lab deploy --all` 参数直传，天然无此问题。
@@ -75,6 +76,12 @@ claude-lab switch <profile>   # 切换模型配置（--ephemeral 仅当前会话
 - 多模型切换：`profiles/_base.json` + `<profile>.json` 深度合并 → 写入 `~/.claude/settings.json`
 - **ANTHROPIC_AUTH_TOKEN 保护**（`lab.js` 的 `buildProfileConfig`）：profile/base 中为占位符（如 `API_KEY`、`YOUR_API_KEY_HERE`）时移除该键并继承本地已有真实值，防止误覆盖
 - `settings/CLAUDE.md` 是部署到 `~/.claude/CLAUDE.md` 的**全局个人指令**，与本项目级 CLAUDE.md 无关
+
+### gitinit/ 配置模块
+
+- `~/.claude` 本地 git 追踪（仅本地、不推送远程），用 `git status`/`git diff` 观察 `deploy`/`switch` 的覆盖变化
+- 与 settings 同款模式：`gitinit/.gitignore.template` 入仓（可迭代），`claude-lab gitinit` 每次执行**覆盖** `~/.claude/.gitignore`；`git init` 幂等（已有 `.git` 则跳过）
+- 迭代方式：修改模板 → 重新 `claude-lab gitinit` 同步；模板忽略 `settings.json` 等敏感配置与会话/缓存等动态数据
 
 ## 工作流
 

@@ -60,6 +60,9 @@ claude-lab deploy commit-draft   # 之后对话中输入 /commit-draft 即可使
 # 5. 切换模型配置
 claude-lab switch                # 列出可用 profiles
 claude-lab switch deepseek       # 切换到 deepseek
+
+# 6. 初始化 ~/.claude 本地 git 追踪（可选，追踪 deploy/switch 的覆盖变化）
+claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 ```
 
 > **主流程是一键部署，而不是逐个部署。** 技能不是孤立的——`comment-keeper` / `test-keeper` 等运行时依赖 `docs/`（规范指南）与 `rules/`（强制规则）两个独立模块，`claude-lab deploy <name>` 只部署目标模块本身、不携带这些依赖；只有 `claude-lab deploy --all` 才把全部模块一次落位。**单独部署是开发完成后的迭代动作**：`/skill-forge` 改完某个模块后，只重新部署那一个，避免全量覆盖。仓库内也可用 npm 脚本薄封装：`npm run deploy <name>`、`npm run switch <profile>` 等（见下方指令参考）。
@@ -83,6 +86,7 @@ claude-lab switch deepseek       # 切换到 deepseek
 | `claude-lab switch` | 列出可用 profiles |
 | `claude-lab switch <profile>` | 切换模型配置 |
 | `claude-lab switch <profile> --ephemeral` | 仅当前会话生效 |
+| `claude-lab gitinit` | 覆盖 `~/.claude/.gitignore`（来自 `gitinit/.gitignore.template`，同 switch 覆盖 settings.json） |
 
 仓库内 npm 脚本为同一 CLI 的薄封装：`npm run lab`（帮助）、`npm run list` / `status` / `deploy <name>` / `remove <name>` / `switch <profile>`。`npm run deploy --all` 无需 `--` 分隔符（CLI 从 `npm_config_all` 等环境变量恢复标志）。
 
@@ -109,6 +113,7 @@ claude-lab switch deepseek       # 切换到 deepseek
 | **[ts-code-guide](docs/ts-code-guide/README.md)** | docs | TS 规范参考文档（注释/风格/类型/错误处理/测试 5 份指南）→ `~/.claude/docs/`，按需引用不占上下文 |
 | **[openspec](suites/openspec/README.md)** | suite | 6 个 `/opsx:*` 斜杠命令，规范驱动开发（需全局安装 `openspec` CLI） |
 | **[settings](settings/README.md)** | settings | 多模型切换（`_base.json` + profiles 合并），VSCode 配置部署 |
+| **[gitinit](gitinit/README.md)** | gitinit | `~/.claude` 本地 git 追踪：`claude-lab gitinit` 覆盖 `.gitignore`（同 switch 覆盖 settings.json），追踪 deploy/switch 的文件变化 |
 
 ### 🟡 规划中
 
