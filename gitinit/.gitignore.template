@@ -11,17 +11,24 @@
 
 # ---- 本地覆盖配置（Claude Code 本地覆盖，非 lab 产物，用户自维护）----
 settings.local.json
+*.secret.*
+*.env
+.env
+**/id_rsa*
 
 # ---- 会话 / 历史 / 动态数据（量大且变化频繁）----
+projects/
 history.jsonl
 history/
 sessions/
 session-env/
-projects/
+tasks/
 todos/
 plans/
+debug/
 file-history/
 shell-snapshots/
+stats-cache.json
 telemetry/
 statsig/
 cache/
@@ -29,8 +36,12 @@ backups/
 plugins/
 ide/
 .last-cleanup
+.last-update-result.json
+chrome_debug_profile/
 
 # ---- 系统 / 临时文件 ----
 .DS_Store
 Thumbs.db
 *.log
+logs/
+desktop.init
