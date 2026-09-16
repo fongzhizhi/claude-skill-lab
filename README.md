@@ -122,6 +122,7 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | **hooks 落地** | 部署后自动核对一致性、提交前提醒等自动化 hook |
 | **agents 子代理** | 规范审查专用代理，主对话只拿结论，省上下文 |
 | **workflows 编排** | 批量重构 / 批量规范审查等多 agent 并行场景 |
+| **AI 辅助自动化测试 / Skill 评测** | 三层混合架构：语义化标签 + Page Object + AI 只做维护，见 [plans/ai-assisted-testing.md](project-docs/plans/ai-assisted-testing.md)（未来研究，需被测项目有测试框架） |
 
 类型目录：`hooks/` · `workflows/` · `agents/` 已预留，按需生长
 
