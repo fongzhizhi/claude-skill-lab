@@ -357,6 +357,8 @@ settings/
 
 **Ephemeral 模式**：`--ephemeral` 参数不修改磁盘文件，合并在内存中完成，仅对当前会话生效。
 
+**会话与记忆策略**（`_base.json` 顶层键）：`cleanupPeriodDays: 30` 控制 `~/.claude/projects/` 会话 transcript 自动清理（启动时按阈值删除旧记录，官方默认 30），防磁盘膨胀；`autoMemoryEnabled: false` 关闭自动记忆管线（不自动写入、不自动召回）——知识统一固化到 `CLAUDE.md`，bug/需求变更以代码为准，不依赖记忆系统。
+
 ### VSCode 配置
 
 | 仓库位置                        | 目标位置（由 CLI 动态解析） |

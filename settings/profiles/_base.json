@@ -13,7 +13,8 @@
     "MAX_THINKING_TOKENS": "16000",
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "70"
   },
-  "cleanupPeriodDays": 60,
+  "cleanupPeriodDays": 30,
+  "autoMemoryEnabled": false,
   "language": "zh-CN",
   "autoUpdatesChannel": "stable",
   "theme": "dark-ansi",
