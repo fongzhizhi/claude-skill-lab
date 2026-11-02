@@ -1,0 +1,15 @@
+{
+  "dependencies": [
+    {
+      "name": "git（>= 2.38，/git-flow-merge 的 merge-tree 预检）",
+      "check": "git --version",
+      "required": true
+    },
+    {
+      "name": "glab（GitLab CLI，/git-flow-merge 自动创建 MR 用）",
+      "check": "glab --version",
+      "install": "winget install glab.glab",
+      "required": false
+    }
+  ]
+}

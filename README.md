@@ -115,10 +115,12 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | **[settings](settings/README.md)** | settings | 多模型切换（`_base.json` + profiles 合并），VSCode 配置部署 |
 | **[gitinit](gitinit/README.md)** | gitinit | `~/.claude` 本地 git 追踪：`claude-lab gitinit` 覆盖 `.gitignore`（同 switch 覆盖 settings.json），追踪 deploy/switch 的文件变化 |
 
-### 🟡 规划中
+### 🟡 待部署 / 规划中
 
-| 方向 | 说明 |
+| 模块 / 方向 | 说明 |
 | --- | --- |
+| **format-keeper** | 纯格式化 skill：默认只处理 git 变更文件，按项目已有工具执行，供 git-flow 提交流水线内嵌（仓库已创建，待部署） |
+| **git-flow 套件** | 环境分支 + 任务分支工作流：`/git-flow-start`、`/git-flow-sync`、`/git-flow-commit`、`/git-flow-merge`，见 [plans/git-flow.md](project-docs/plans/git-flow.md)（仓库已创建，待部署） |
 | **hooks 落地** | 部署后自动核对一致性、提交前提醒等自动化 hook |
 | **agents 子代理** | 规范审查专用代理，主对话只拿结论，省上下文 |
 | **workflows 编排** | 批量重构 / 批量规范审查等多 agent 并行场景 |
@@ -135,6 +137,11 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | 想创建新技能/命令 | `/skill-forge "创建一个 xxx"` |
 | 想按规范整理/修复代码注释 | `/comment-keeper`（可指定文件/目录/函数） |
 | 想统一命名/清理魔法数字 | `/style-keeper`（可指定文件/目录） |
+| 想格式化代码 | `/format-keeper`（默认 git 变更文件，支持 `--check`） |
+| 想按 ONES 单创建任务分支 | `/git-flow-start <工单内容/单号> [环境]` |
+| 想同步任务分支到环境分支 | `/git-flow-sync [环境]` |
+| 想提交并推送任务分支 | `/git-flow-commit`（默认 push，`--no-push` 只提交） |
+| 想创建合入环境的 MR | `/git-flow-merge`（可 `--reviewer`、`--dry-run`） |
 | 想修复类型安全漏洞 | `/type-keeper`（可指定文件/目录） |
 | 想修复错误处理问题 | `/error-handling-keeper`（可指定文件/目录） |
 | 想补充/修复单元测试 | `/test-keeper`（可指定模块/目录） |
