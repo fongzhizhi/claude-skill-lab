@@ -10,13 +10,13 @@
 
 | 类型 | 名称 | 说明 |
 | --- | --- | --- |
-| 命令 | `/gitflow:init` | 扫描多仓库工作区，探测远端环境分支，生成 `.claude/gitflow.json` 草稿，人工确认后落盘 |
+| 命令 | `/gitflow:init` | 默认扫描当前仓库，`--all` 扫描父目录下全部兄弟仓库；创建或增量更新唯一的 `~/.claude/gitflow.json`，人工确认后落盘 |
 | 命令 | `/gitflow:start` | 从 ONES 工单创建任务分支；未指定环境时用链式顶端（通常 `dev`），`--no-track` 避免误跟踪环境分支；`--repos` 为兄弟仓库创建同名对齐分支 |
 | 命令 | `/gitflow:sync` | 把所属环境分支的最新改动合入当前任务分支（fetch → 比较 → merge），冲突停摆 |
 | 命令 | `/gitflow:commit` | `git add -A` → format-keeper → mojibake-fixer → `git add -A` → commit-draft → commit → push；执行前检测其他仓库遗漏改动 |
 | 命令 | `/gitflow:merge` | fetch 后校验推送状态 → `merge-tree` 冲突预检（注明快照）→ 用 glab 创建合入所属环境的 MR |
 | 技能 | `gitflow-core` | 共享规则：配置、操作仓库、环境链、前置检查、多仓库检测、ONES 解析、分支命名、远端 URL 推导、安全边界 |
-| 文档 | `gitflow-config` | 项目配置参考（部署到 `~/.claude/docs/`，按需引用） |
+| 文档 | `gitflow-config` | 配置参考（部署到 `~/.claude/docs/`，按需引用） |
 
 ## 前置依赖
 
@@ -41,28 +41,32 @@ claude-lab deploy gitflow
 
 ## 配置
 
-首次接入用 `/gitflow:init` 自动生成：
+gitflow 只有一份配置 `~/.claude/gitflow.json`，由 `/gitflow:init` 创建或增量更新：
 
 ```text
-/gitflow:init --envs 3.1,3.2,4.1,4.2,dev
-/gitflow:init --envs 4.1,4.2,dev --repos pro-ui,pro-pcb,pro-api
-/gitflow:init --single --envs 4.1,4.2,dev
+/gitflow:init --envs 3.1,3.2,4.1,4.2,dev          # 只处理当前仓库
+/gitflow:init --all --envs 3.1,3.2,4.1,4.2,dev    # 扫描父目录下全部兄弟仓库
+/gitflow:init                                      # 已有配置时沿用 chain，只更新当前仓库
+/gitflow:init --all --dry-run
 ```
 
-它会扫描兄弟仓库、执行 `git ls-remote --heads` 探测环境分支、展示草稿，确认后才落盘；无法自动匹配的分支名（如 `pro-api/0.3`）会停摆询问。
+- 默认只扫描当前仓库；`--all` 才遍历当前仓库父目录下的直接子仓库
+- 文件不存在 → 创建；已存在 → 只更新本次涉及的仓库条目，保留其他仓库与手工字段
+- 不创建项目/工作区 `.claude/gitflow.json`，不读取 `settings.json#gitflow`，没有多文件优先级
+- 落盘前展示草稿与变更摘要；远端分支无法自动匹配时停摆询问
 
-也可以手写 `.claude/gitflow.json`（配置版本 `2`）：
+`repos.*.path` 相对当前工作区目录（当前仓库根的上一级）解析，缺省为仓库键名；标准兄弟布局可以省略 `path`。配置可同时包含多个本地工作区的仓库，当前工作区没有的条目会被跳过。完整字段、多工作区与非同构分支示例见部署后的 `~/.claude/docs/gitflow-config.md`（本套件 `dist/docs/gitflow-config.md`）。
+
+最小配置示例（配置版本 `2`）：
 
 ```json
 {
   "version": 2,
-  "remote": "origin",
-  "chain": ["3.1", "3.2", "4.1", "4.2", "dev"],
+  "chain": ["4.1", "4.2", "dev"],
   "active": ["4.1", "4.2", "dev"],
   "default_env": "dev",
   "repos": {
     "pro-ui": {
-      "path": "pro-ui",
       "envs": {
         "dev": "pro-ui/dev",
         "4.2": "pro-ui/4.2",
@@ -73,13 +77,9 @@ claude-lab deploy gitflow
 }
 ```
 
-`repos.*.path` 相对配置文件所在目录（`.claude` 的上一级）解析：工作区配置写兄弟目录名，单仓库配置写 `"."`。完整字段、多仓库与非同构分支示例见部署后的 `~/.claude/docs/gitflow-config.md`（本套件 `dist/docs/gitflow-config.md`）。
+> 从 v0.3.x 升级：配置只认 `~/.claude/gitflow.json`；旧的项目/工作区 `.claude/gitflow.json` 不再读取。进入任一工作区的仓库运行 `/gitflow:init --all` 重新生成，然后删除旧文件。
 
-> 全局默认可写在 `claude-skill-lab/settings/profiles/_base.json` 的 `gitflow` 字段，由 `claude-lab switch` 合并进 `~/.claude/settings.json`；仓库/工作区配置优先。
-
-> 从 v0.1 升级：配置版本从 `1` 升到 `2`，`path` 语义改为相对配置文件基准目录。用 `/gitflow:init` 重新生成最省事。
-
-> 从 v0.2 升级：命令由 `/git-flow-*` 改为 `/gitflow:*`，配置文件由 `.claude/git-flow.json` 改名为 `.claude/gitflow.json`，全局键由 `gitFlow` 改为 `gitflow`；配置内容不变，改名即可。若曾部署旧版，先删除 `~/.claude/commands/git-flow-*.md` 与 `~/.claude/skills/git-flow-core/`，再部署本套件。
+> 从 v0.1/v0.2 升级：配置版本需为 `2`；命令已统一为 `/gitflow:*`，旧命令 `/git-flow-*` 与旧配置 `.claude/git-flow.json` 不再识别。用 `/gitflow:init` 重新生成最省事。
 
 ## 部署
 
@@ -93,10 +93,13 @@ claude-lab deploy gitflow          # 或 claude-lab deploy suites/gitflow
 - 共享技能 → `~/.claude/skills/gitflow-core/SKILL.md`
 - 配置参考 → `~/.claude/docs/gitflow-config.md`
 
+部署只安装命令、技能与文档，**不创建也不更新** `~/.claude/gitflow.json`；配置文件只由 `/gitflow:init` 维护。
+
 ## 使用
 
 ```text
 /gitflow:init --envs 3.1,3.2,4.1,4.2,dev
+/gitflow:init --all --envs 3.1,3.2,4.1,4.2,dev
 
 /gitflow:start PRO-159115【冒烟测试】显示颜色设置背景色之后，重新打开PCB，背景色丢失
 heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
@@ -119,7 +122,7 @@ heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
 - 任务分支从**所属环境**拉出，只合回该环境
 - 未指定环境 → `default_env`（链式顶端，通常 `dev`）
 - `/gitflow:sync` 的方向是**环境分支 → 任务分支**：把所属环境的最新改动合入任务分支
-- 环境之间的提升按链式顺序逐级 MR（v0.3 暂未提供，规划为 `/gitflow:promote`）
+- 环境之间的提升按链式顺序逐级 MR（v0.4 暂未提供，规划为 `/gitflow:promote`）
 
 ### 提交流水线
 
@@ -131,7 +134,7 @@ git add -A → format-keeper → mojibake-fixer → git add -A
 - 格式化 `failed` 或乱码检查失败 → 停摆，不提交；格式化 `skipped` → 记录警告后继续
 - 疑似敏感文件（`.env`、`*.key` 等）→ 停摆确认
 - 推送非快进/权限失败 → 停摆，绝不 force
-- v0.3 暂不执行 TS 类型检查与单元测试；配置 `commit.checks` 为预留位
+- v0.4 暂不执行 TS 类型检查与单元测试；配置 `commit.checks` 为预留位
 
 ## 多仓库协同
 
@@ -147,7 +150,7 @@ git add -A → format-keeper → mojibake-fixer → git add -A
 
 - **不自动解决冲突**：`/gitflow:sync` 冲突停摆；`/gitflow:merge` 只做 `merge-tree` 预检，不碰工作区
 - **不直接提交保护分支**：环境分支、`main`/`master`、配置的 `protected` 一律拒绝
-- **不执行破坏性操作**：`reset --hard`、`clean`、`rebase`、`force push`、`--amend` 均需用户明确要求（v0.3 不提供）
+- **不执行破坏性操作**：`reset --hard`、`clean`、`rebase`、`force push`、`--amend` 均需用户明确要求（v0.4 不提供）
 - **不猜测异常**：配置缺失、工单/环境/类型不确定、glab 不可用、状态与预期不符 → 停摆询问
 - **不隐式操作其他仓库**：跨仓库写操作必须显式 `--repo`/`--repos`，不自动切换其他仓库工作区；遗漏检测只读
 

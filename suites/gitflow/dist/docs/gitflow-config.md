@@ -1,89 +1,53 @@
 # gitflow 配置参考
 
-`gitflow` 套件读取项目的环境链、仓库映射与 MR 默认值。配置文件放在**仓库根目录或工作区根目录**：
+gitflow 只有一份配置：
 
 ```text
-<repo>/.claude/gitflow.json          单仓库
-<workspace>/.claude/gitflow.json     多仓库工作区
+~/.claude/gitflow.json
 ```
 
-建议用 `/gitflow:init` 自动生成草稿（扫描兄弟仓库、探测远端环境分支），确认后落盘。生成逻辑不猜测无法自动匹配的分支名；遇到 `pro-api/0.3` 这类非同构映射会停摆询问。
+不创建项目/工作区 `.claude/gitflow.json`，不读取 `settings.json#gitflow`，不支持环境变量覆盖，也没有多文件优先级。所有命令读取同一份全局配置。
 
-建议把配置提交到仓库，让团队共享同一套环境分支映射；个人差异（用户名、审核人）可放全局默认。工作区根目录不在任何仓库内时无法提交，如需共享可复制到各仓库的 `.claude/gitflow.json`。
+## 生成与更新
 
-## 查找与合并顺序
+配置由 `/gitflow:init` 创建或增量更新：
 
-1. 环境变量 `GITFLOW_CONFIG` 指向的文件（临时覆盖）
-2. 当前仓库根目录的 `.claude/gitflow.json`（当前目录不在仓库内时查当前目录）
-3. 向上最多 3 层的 `.claude/gitflow.json`
-4. 全局默认：`~/.claude/settings.json` 的 `gitflow` 字段
+```text
+/gitflow:init --envs 3.1,3.2,4.1,4.2,dev     # 只处理当前仓库
+/gitflow:init --all --envs 3.1,3.2,4.1,4.2,dev  # 扫描父目录下全部兄弟仓库
+/gitflow:init                                # 已有配置时沿用 chain，只更新当前仓库
+/gitflow:init --all --dry-run                # 只预览，不写文件
+```
 
-第 2、3 步只采用与操作目标匹配的配置：
+- 默认只扫描当前仓库，不遍历父目录
+- `--all` 扫描当前仓库根目录的父目录下所有直接子仓库
+- 文件不存在 → 创建；已存在 → 只更新本次涉及的仓库条目，保留其他仓库条目与手工字段
+- 落盘前展示草稿与变更摘要，确认后写入
+- 无法自动匹配的远端分支停摆询问，不猜测
 
-- 无 `--repo` 且当前目录在 Git 仓库内：配置中有 `path` 解析后等于当前仓库根目录的条目
-- 无 `--repo` 且当前目录不在 Git 仓库内：直接采用第 2 步找到的配置（随后必须用 `--repo` 指定操作仓库）
-- 有 `--repo <name>`：配置的 `repos` 中有该名字的条目
+`claude-lab deploy gitflow` 只部署命令、技能与本文档，**不创建也不更新** `~/.claude/gitflow.json`；配置文件只由 `/gitflow:init` 维护。
 
-**路径基准目录（base）**：配置文件所在目录；若目录名为 `.claude`，取上一级。`repos.*.path` 一律相对 base 解析：
+## 路径基准
 
-- `<repo>/.claude/gitflow.json` → base = `<repo>`，写 `"path": "."`
-- `<workspace>/.claude/gitflow.json` → base = `<workspace>`，写 `"path": "pro-ui"`
+`repos.*.path` 相对**工作区目录**解析：
 
-同一份工作区配置由此可以在任意仓库内执行，不随当前目录变化。
+- 当前目录在 Git 仓库内：工作区目录 = 当前仓库根目录的上一级
+- 当前目录不在仓库内（仅 `--repo` 场景可能）：工作区目录 = 当前目录
 
-全局默认与配置深度合并，配置优先；数组整体替换，`repos` 按仓库名合并。
-
-> 全局默认建议写在 `claude-skill-lab/settings/profiles/_base.json` 的 `gitflow` 字段中，由 `claude-lab switch` 合并进 `~/.claude/settings.json`。直接改 `~/.claude/settings.json` 会在下次 `switch` 时丢失（仅 token/api_key 会被保留）。
-
-全局默认示例（只放个人/团队固定项，`repos` 仍放仓库/工作区配置）：
+`path` 缺省为仓库键名，即 `<workspace>/<repo-name>`。标准兄弟布局可以省略 `path`：
 
 ```json
 {
-  "gitflow": {
-    "chain": ["3.1", "3.2", "4.1", "4.2", "dev"],
-    "active": ["4.1", "4.2", "dev"],
-    "default_env": "dev",
-    "branch_pattern": "{user}/{type}/{version}-{ticket}",
-    "branch_types": { "PRO": "feat", "BUG": "fix" },
-    "mr": { "remove_source_branch": false }
-  }
-}
-```
-
-## 完整示例（单仓库）
-
-```json
-{
-  "version": 2,
-  "remote": "origin",
-  "chain": ["3.1", "3.2", "4.1", "4.2", "dev"],
-  "active": ["4.1", "4.2", "dev"],
-  "default_env": "dev",
-  "user": "jiangshun",
-  "branch_pattern": "{user}/{type}/{version}-{ticket}",
-  "branch_types": { "PRO": "feat", "BUG": "fix" },
-  "protected": ["main", "master"],
   "repos": {
-    "pro-ui": {
-      "path": ".",
-      "envs": {
-        "dev": "pro-ui/dev",
-        "4.2": "pro-ui/4.2",
-        "4.1": "pro-ui/4.1"
-      }
-    }
-  },
-  "mr": {
-    "remove_source_branch": false,
-    "draft": false,
-    "reviewers": []
+    "pro-ui": { "envs": { "dev": "pro-ui/dev" } },
+    "pro-pcb": { "path": "pro-pcb", "envs": { "dev": "pro-pcb/dev" } }
   }
 }
 ```
 
-## 多仓库示例（工作区根目录）
+同一份配置适用于任意具有相同兄弟目录布局的本地工作区。某个克隆的目录名不同时，在该克隆运行 `/gitflow:init` 会新增/更新对应目录名的条目，已有条目不受影响。
 
-配置文件放在多仓库工作区根目录，`path` 写兄弟目录名（相对 base，即工作区根目录）：
+## 完整示例
 
 ```json
 {
@@ -113,51 +77,13 @@
 }
 ```
 
-- 在 `pro-ui` 或 `pro-pcb` 内执行命令都能匹配到同一份工作区配置
-- `/gitflow:commit --repo pro-pcb` 可显式操作兄弟仓库，无需切换目录
-- 多仓库模式下，commit / sync / merge 会先检测其他仓库的未提交改动与同名任务分支，命中即停摆提醒
-
-## 环境分支名不同构（pro-api 类）
-
-`envs` 是“环境名 → 完整远端分支名”的显式映射，**不要求各仓库同构**。远端分支编号与版本号不一致时直接写映射即可：
-
-```json
-{
-  "version": 2,
-  "remote": "origin",
-  "chain": ["3.1", "3.2", "4.1", "4.2", "dev"],
-  "active": ["4.1", "4.2", "dev"],
-  "default_env": "dev",
-  "repos": {
-    "pro-ui": {
-      "path": "pro-ui",
-      "envs": {
-        "dev": "pro-ui/dev",
-        "4.2": "pro-ui/4.2",
-        "4.1": "pro-ui/4.1"
-      }
-    },
-    "pro-api": {
-      "path": "pro-api",
-      "envs": {
-        "dev": "pro-api/0.5",
-        "4.2": "pro-api/0.4",
-        "4.1": "pro-api/0.3"
-      }
-    }
-  }
-}
-```
-
-- 同一环境名在不同仓库可以指向完全不同的分支名
-- 允许多个环境指向同一分支（如 `4.1`、`4.2` 都映射到 `pro-api/0.3`）
-- 分支名写**完整远端名**（如 `pro-api/0.3`），不是 `0.3`
+`repos` 中可以同时包含多个本地工作区的仓库。命令只操作当前工作区存在的仓库；配置中存在但当前工作区没有的条目会被跳过，不会导致停摆。
 
 ## 字段说明
 
 | 字段 | 必填 | 缺省 | 说明 |
 | --- | --- | --- | --- |
-| `version` | 是 | — | 配置版本，当前固定 `2`（`1` 为旧路径语义，已不兼容） |
+| `version` | 是 | — | 配置版本，当前固定 `2` |
 | `remote` | 否 | `origin` | 远端名 |
 | `chain` | 是 | — | 环境链，从低到高。链式提升只能沿此顺序向右 |
 | `active` | 否 | 等于 `chain` | 当前在用的环境子集；命令只接受其中的环境 |
@@ -175,8 +101,29 @@
 
 | 字段 | 必填 | 说明 |
 | --- | --- | --- |
-| `path` | 否 | 仓库路径，相对配置 base（`.claude` 的上一级）；缺省 `.` |
+| `path` | 否 | 仓库路径，相对工作区目录；缺省为仓库键名 |
 | `envs` | 是 | 环境名 → 远端环境分支**完整名**（如 `pro-ui/4.1`，不是 `4.1`） |
+
+`envs` 是“环境名 → 完整远端分支名”的显式映射，**不要求各仓库同构**。远端分支编号与版本号不一致时直接写映射：
+
+```json
+{
+  "repos": {
+    "pro-api": {
+      "path": "pro-api",
+      "envs": {
+        "dev": "pro-api/0.5",
+        "4.2": "pro-api/0.4",
+        "4.1": "pro-api/0.3"
+      }
+    }
+  }
+}
+```
+
+- 同一环境名在不同仓库可以指向完全不同的分支名
+- 允许多个环境指向同一分支（如 `4.1`、`4.2` 都映射到 `pro-api/0.3`）
+- 分支名写**完整远端名**（如 `pro-api/0.3`），不是 `0.3`
 
 `mr`：
 
@@ -190,7 +137,7 @@
 
 | 字段 | 缺省 | 说明 |
 | --- | --- | --- |
-| `checks` | `[]` | **预留**：提交前附加检查命令（字符串数组）。v0.3 不执行，未来按项目启用 TS 检查/单测等，只需改配置 |
+| `checks` | `[]` | **预留**：提交前附加检查命令（字符串数组）。v0.4 不执行，未来按项目启用 TS 检查/单测等，只需改配置 |
 
 ## 分支命名
 
@@ -219,30 +166,24 @@
 - 未指定环境时取 `default_env`，即链式顶端
 - `active` 用于临时停用某个环境；停用后命令拒绝该环境
 
-## 手动 MR 入口
+## 手工编辑
 
-`/gitflow:merge` 在 glab 不可用时给出手动入口。Web 地址由远端 URL 推导：
+可以直接编辑 `~/.claude/gitflow.json`，但必须保持 `version` 为 `2`、字段结构合法。下次运行 `/gitflow:init` 时：
 
-| 远端形式 | Web 地址 |
-| --- | --- |
-| `git@<host>:<group>/<repo>.git` | `https://<host>/<group>/<repo>` |
-| `ssh://git@<host>[:<port>]/<group>/<repo>.git` | `https://<host>/<group>/<repo>`（丢弃 SSH 端口） |
-| `https://<host>/<group>/<repo>.git` | `https://<host>/<group>/<repo>`（去掉 `.git`） |
-
-```text
-<web-url>/-/merge_requests/new?merge_request[source_branch]=<source>&merge_request[target_branch]=<target>
-```
-
-分支名中的 `/` 必须编码为 `%2F`。
+- 本次扫描到的仓库条目会被更新
+- 未扫描的仓库条目与未知顶层字段原样保留
+- 已失效的环境键可能被移除；摘要中会列出
 
 ## 配置检查清单
 
-1. `version` 为 `2`（从 v0.1 升级时用 `/gitflow:init` 重新生成或按新路径语义迁移）
+1. `version` 为 `2`
 2. `chain` 从低到高排列，`active` 是它的子集
 3. `default_env` 在 `active` 中
-4. 每个 `repos.*.path` 相对配置 base 正确指向仓库根目录
+4. 每个 `repos.*.path` 相对工作区目录指向仓库根目录；标准兄弟布局可省略
 5. 每个 `repos.*.envs` 的键都在 `chain` 中，值是远端已存在的完整分支名
 6. 不同仓库的 `envs` 可以不同构（`4.1` → `pro-api/0.3` 是合法配置）
 7. `branch_pattern` 四个占位符齐全
 8. 分支名符合 `git check-ref-format --branch`（不要有空格、`~^:?*[` 等）
 9. 保护分支包含所有环境分支（环境分支由 `envs` 自动加入，无需重复写）
+10. 全局只有 `~/.claude/gitflow.json` 一份配置；不创建项目/工作区配置
+11. 配置可以包含其他本地工作区的仓库；当前工作区缺失的条目会被跳过

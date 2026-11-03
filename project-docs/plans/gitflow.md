@@ -420,28 +420,35 @@ pro-pcb: jiangshun/fix/4.1-PRO-159115
 
 ## 九、配置文件
 
-### `.claude/env.json`（放在项目根目录）
+### `~/.claude/gitflow.json`（唯一全局配置，v0.4 起）
+
+配置由 `/gitflow:init` 创建或增量更新；不创建项目/工作区配置，也没有多文件优先级。
 
 ```json
 {
-  "repos": {
-    "pro-ui": {
-      "dev": "pro-ui/dev",
-      "4.2": "pro-ui/4.2",
-      "4.1": "pro-ui/4.1",
-      "3.2": "pro-ui/3.2",
-      "3.1": "pro-ui/3.1"
-    },
-    "pro-pcb": {
-      "dev": "pro-pcb/dev",
-      "4.2": "pro-pcb/4.2",
-      "4.1": "pro-pcb/4.1"
-    }
-  },
+  "version": 2,
   "chain": ["3.1", "3.2", "4.1", "4.2", "dev"],
   "active": ["4.1", "4.2", "dev"],
   "default_env": "dev",
-  "user_source": "git config user.name"
+  "remote": "origin",
+  "repos": {
+    "pro-ui": {
+      "path": "pro-ui",
+      "envs": {
+        "dev": "pro-ui/dev",
+        "4.2": "pro-ui/4.2",
+        "4.1": "pro-ui/4.1"
+      }
+    },
+    "pro-pcb": {
+      "path": "pro-pcb",
+      "envs": {
+        "dev": "pro-pcb/dev",
+        "4.2": "pro-pcb/4.2",
+        "4.1": "pro-pcb/4.1"
+      }
+    }
+  }
 }
 ```
 
@@ -449,13 +456,15 @@ pro-pcb: jiangshun/fix/4.1-PRO-159115
 
 | 字段 | 用途 |
 |------|------|
-| `repos` | 仓库名 ↔ 环境分支映射 |
+| `version` | 配置版本，当前固定 `2` |
+| `repos` | 仓库名 ↔ `{ path, envs }`；`path` 相对工作区目录，缺省为仓库键名 |
+| `envs` | 环境名 → 远端环境分支完整名（如 `pro-ui/4.1`），不要求各仓库同构 |
 | `chain` | 完整的链式顺序 |
 | `active` | 当前活跃的环境（用于推断可选高版本） |
 | `default_env` | 用户未指定环境时的默认值 |
-| `user_source` | 用户名的来源 |
+| `remote` | 远端名，缺省 `origin` |
 
-新增仓库或环境时，只改配置文件，不改 skill。
+新增仓库或环境时，优先重新运行 `/gitflow:init` 增量更新配置，不改 skill。
 
 
 ## 十、AI 行为边界
@@ -559,7 +568,7 @@ pro-pcb: jiangshun/fix/4.1-PRO-159115
 | 环境同步 | **链式**：任务分支只合回所属环境；环境之间按 `chain` 顺序逐级 MR 提升（`4.1 → 4.2 → dev`） |
 | 未指定环境 | 默认 `default_env`，即链式顶端（通常 `dev`） |
 | 异常处理 | AI 不能快速解决的异常一律**停摆询问**，不猜测、不重试、不绕过 |
-| 配置位置 | 仓库根 `.claude/gitflow.json`（项目映射，建议提交）；全局默认放 `settings/profiles/_base.json` 的 `gitflow` 字段，经 `switch` 合并进 `~/.claude/settings.json` |
+| 配置位置 | 唯一全局配置 `~/.claude/gitflow.json`：`/gitflow:init` 默认更新当前仓库，`--all` 扫描父目录下全部仓库；不创建项目/工作区配置，无多文件优先级；`claude-lab deploy` 不管理配置 |
 | 提交流水线 | `git add -A` → `format-keeper` → `mojibake-fixer` → `git add -A` → `commit-draft` → `git commit` → `git push`；v0.1 暂不含 TS 检查与单元测试 |
 | 格式化 | 独立为 `skills/format-keeper`，可单独运行，也被 `/gitflow:commit` 内嵌引用 |
 | 分支创建 | `git checkout --no-track -b`，避免任务分支跟踪环境分支导致 `git push` 误推/被拒 |

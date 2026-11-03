@@ -1,7 +1,7 @@
 {
   "name": "gitflow",
-  "version": "0.3.0",
-  "description": "Git 环境分支工作流套件：/gitflow:init、/gitflow:start、/gitflow:sync、/gitflow:commit、/gitflow:merge 五个命令与共享核心技能，覆盖配置生成、任务分支创建、多仓库协同、环境同步、格式化提交与 MR 冲突预检。",
+  "version": "0.4.0",
+  "description": "Git 环境分支工作流套件：/gitflow:init、/gitflow:start、/gitflow:sync、/gitflow:commit、/gitflow:merge 五个命令与共享核心技能，覆盖唯一全局配置的创建/增量更新、任务分支创建、多仓库协同、环境同步、格式化提交与 MR 冲突预检。",
   "type": "suite",
   "mappings": [
     {

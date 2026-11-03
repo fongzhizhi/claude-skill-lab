@@ -1,7 +1,7 @@
 ---
 name: gitflow-core
-description: gitflow 套件的共享规则：配置读取与校验、操作仓库解析、环境链、工作区前置检查、多仓库遗漏检测、内嵌技能上下文、ONES 工单解析、分支命名、远端 URL 推导与 Git 安全边界。执行 /gitflow:start、/gitflow:sync、/gitflow:commit、/gitflow:merge 前必须先读取本技能；/gitflow:init 复用本文件的配置校验规则。单个命令只描述自身流程，通用规则以本文件为准。
-version: 0.3.0
+description: gitflow 套件的共享规则：唯一全局配置的读取与校验、操作仓库解析、环境链、工作区前置检查、多仓库遗漏检测、内嵌技能上下文、ONES 工单解析、分支命名、远端 URL 推导与 Git 安全边界。执行 /gitflow:start、/gitflow:sync、/gitflow:commit、/gitflow:merge 前必须先读取本技能；/gitflow:init 复用本文件的配置校验规则。单个命令只描述自身流程，通用规则以本文件为准。
+version: 0.4.0
 ---
 # gitflow-core
 
@@ -9,38 +9,25 @@ gitflow 套件的**单一规则来源**。四个执行命令执行前先读取�
 
 ## 1. 配置
 
-### 1.1 查找顺序
+### 1.1 唯一配置
 
-1. 环境变量 `GITFLOW_CONFIG` 指向的绝对路径（临时覆盖，优先级最高）
-2. 当前仓库根目录的 `.claude/gitflow.json`；当前目录不在任何 Git 仓库内时，查找当前目录的 `.claude/gitflow.json`
-3. 从当前仓库根目录向上最多 3 层，查找 `<dir>/.claude/gitflow.json`
-4. 全局默认：`~/.claude/settings.json` 的 `gitflow` 字段（由 `settings/profiles/_base.json` 维护，`claude-lab switch` 会保留）
+gitflow 只有一份配置：`~/.claude/gitflow.json`。
 
-第 2、3 步只采用**与操作目标匹配**的配置：
-
-- 无 `--repo` 且当前目录在 Git 仓库内：配置中存在 `path` 解析后等于当前仓库根目录的 `repos` 条目
-- 无 `--repo` 且当前目录不在 Git 仓库内：直接采用第 2 步找到的配置（随后 §2.1 会要求用 `--repo` 指定操作仓库）
-- 有 `--repo <name>`：配置的 `repos` 中存在该名字的条目
-
-不匹配的配置跳过，继续向下查找；全部不匹配 → **停摆**。
-
-**配置文件基准目录（下称 base）**：配置文件所在目录；若该目录名为 `.claude`，取它的上一级。`repos.*.path` 一律相对 base 解析：
-
-- `<repo>/.claude/gitflow.json` → base = `<repo>`，单仓库写 `"path": "."`
-- `<workspace>/.claude/gitflow.json` → base = `<workspace>`，多仓库写 `"path": "pro-ui"`、`"path": "pro-pcb"`
-- `GITFLOW_CONFIG` 指向其他位置时同理，base 为文件所在目录
-
-> 这样同一份工作区配置在任意仓库内执行命令都能解析出相同的仓库路径，不随当前目录变化。
-
-**合并规则**：全局 `gitflow` 提供默认值，配置覆盖；对象深度合并，数组整体替换。`repos` 按仓库名合并。
-
-找不到任何配置，或配置无法匹配操作目标 → **停摆**，输出：
+- 不读取项目/工作区 `.claude/gitflow.json`，不读取 `settings.json#gitflow`，不支持环境变量覆盖
+- 不创建任何项目/工作区配置文件；配置只由 `/gitflow:init` 新增或增量更新
+- 配置文件不存在 → **停摆**，输出：
 
 ```text
-未找到可用的 gitflow 配置。
-请运行 /gitflow:init 生成配置草稿，或在工作区/仓库根目录创建 .claude/gitflow.json
-（模板见 ~/.claude/docs/gitflow-config.md），或设置 GITFLOW_CONFIG 指向配置文件。
+未找到 ~/.claude/gitflow.json。
+请在当前仓库运行 /gitflow:init 添加/更新当前仓库配置；
+或运行 /gitflow:init --all 扫描当前工作区的全部仓库。
 ```
+
+**base（路径基准）**：`repos.*.path` 相对**工作区目录**解析——当前目录在 Git 仓库内时取当前仓库根目录的上一级；当前目录不在 Git 仓库内（仅使用 `--repo` 时可能）取当前目录。
+
+`repos.*.path` 缺省为**仓库键名**，即 `<workspace>/<name>`。标准兄弟布局可省略 `path`。
+
+> 同一份全局配置适用于任意具有相同兄弟目录布局的本地工作区；配置可以包含当前工作区没有的仓库，检测时跳过。
 
 ### 1.2 关键字段
 
@@ -58,7 +45,7 @@ gitflow 套件的**单一规则来源**。四个执行命令执行前先读取�
 | `protected` | 否 | 额外保护分支名（完整名或短名），与所有环境分支一起禁止直接提交 |
 | `repos` | 是 | 仓库映射，见下 |
 | `mr` | 否 | MR 默认值：`remove_source_branch`（缺省 `false`）、`reviewers`、`draft` |
-| `commit.checks` | 否 | 预留字段（字符串数组）：提交前附加检查命令；v0.3 不执行，未来按项目启用 |
+| `commit.checks` | 否 | 预留字段（字符串数组）：提交前附加检查命令；v0.4 不执行，未来按项目启用 |
 
 `repos` 每个条目：
 
@@ -75,7 +62,7 @@ gitflow 套件的**单一规则来源**。四个执行命令执行前先读取�
 }
 ```
 
-- `path`：仓库路径，相对 **base** 解析；缺省 `"."`。多仓库工作区配置写在 `<workspace>/.claude/gitflow.json`，各条目写兄弟目录名；单仓库配置写 `"."`。
+- `path`：仓库路径，相对 **base**（工作区目录）解析，缺省为仓库键名（即 `<workspace>/<name>`）。标准兄弟布局写 `"path": "pro-ui"`，或直接省略。
 - `envs`：环境名 → **远端环境分支完整名**。同一环境名在不同仓库可以指向完全不同的分支名，不要求同构（如 `"4.1": "pro-api/0.3"`）。缺少当前所需环境 → 停摆并指出缺哪个键。
 - 多个条目同时匹配（仓库嵌套）时取 `path` 最长者；没有匹配 → 停摆并列出已配置路径。
 
@@ -83,12 +70,12 @@ gitflow 套件的**单一规则来源**。四个执行命令执行前先读取�
 
 配置读取后逐项校验，任一失败即停摆并指出文件、字段：
 
-- `version` 必须为 `2`；为 `1` 时提示路径解析语义已变更，请用 `/gitflow:init` 重新生成或参考文档迁移
+- `version` 必须为 `2`；其他版本停摆，提示用 `/gitflow:init` 重新生成
 - `chain` 非空、无重复
 - `active` 非空且必须是 `chain` 的子集
-- `repos` 非空，操作仓库条目必须存在
+- `repos` 非空，操作仓库条目必须存在；`~/.claude/gitflow.json` 是唯一配置来源，不与其他文件合并
 - 操作仓库的 `path` 解析后必须是 Git 仓库根目录（`git -C <root> rev-parse --show-toplevel` 等于该路径）
-- 其他条目的 `path` 在 §2.5 检测阶段核对；不可用时报告，不阻断配置加载
+- 其他条目的 `path` 在 §2.5 检测阶段核对；不可用时跳过（可能属于其他本地工作区），不阻断配置加载
 - `default_env` 若存在，必须在 `active` 中
 - 操作仓库条目必须有 `envs`，且 `envs` 中每个环境名都在 `chain` 中
 - `branch_pattern` 必须包含 `{user}`、`{type}`、`{version}`、`{ticket}`
@@ -101,7 +88,7 @@ gitflow 套件的**单一规则来源**。四个执行命令执行前先读取�
 ### 2.1 操作仓库
 
 - 无 `--repo`：`<root>` = 当前仓库根目录（`git rev-parse --show-toplevel`）；配置中 `path` 解析后等于 `<root>` 的条目为操作仓库
-- `--repo <name>`：`name` 必须是 `repos` 的键；`<root>` = 该条目 `path` 相对 base 解析后的绝对路径；要求它本身是 Git 仓库根目录
+- `--repo <name>`：`name` 必须是 `repos` 的键；`<root>` = 该条目 `path` 相对 base（工作区目录）解析后的绝对路径；要求它本身是 Git 仓库根目录
 - 当前目录不在 Git 仓库内且没有 `--repo` → **停摆**，提示在仓库内运行或显式指定 `--repo`
 - `--repo` 指向的仓库与当前目录所在仓库不同时，输出必须写明“操作仓库: `<name>`（`<root>`）”；会话不需要切换目录
 
@@ -168,7 +155,7 @@ git -C <root> ls-remote --exit-code --heads <remote> <branch>
 
 1. 配置只有 1 个 `repos` 条目 → 跳过
 2. 对除操作仓库外的每个条目：
-   - 解析 `path`；目录不存在或不是 Git 仓库 → 记为「仓库不可用」
+   - 解析 `path`；目录不存在或不是 Git 仓库 → **跳过该条目**（配置可能包含其他本地工作区才有的仓库，属正常情况）
    - `git -C <path> status --porcelain=v1` → 非空记为「未提交改动」
    - `git -C <path> symbolic-ref -q --short HEAD` 等于当前任务分支 → 记为「正在同名任务分支」
    - 否则 `git -C <path> rev-parse --verify --quiet refs/heads/<branch>` 成功 → 记为「存在同名任务分支（未检出）」
@@ -181,8 +168,6 @@ git -C <root> ls-remote --exit-code --heads <remote> <branch>
   pro-pcb（D:/Code/GitEditor/editor-pro/pro-pcb）
     - 未提交改动 3 处：src/a.ts、src/b.ts、src/c.ts
     - 正在同名任务分支 jiangshun/fix/4.1-PRO-159115
-  pro-api（D:/Code/GitEditor/editor-pro/pro-api）
-    - 仓库不可用：配置 repos.pro-api.path = "pro-api"
 
 本次只操作 pro-ui。请选择：
   [1] 继续只处理 pro-ui
@@ -192,6 +177,7 @@ git -C <root> ls-remote --exit-code --heads <remote> <branch>
 
 - 检测结果只是提醒：用户选择 `[1]` 后继续原流程
 - 「正在同名任务分支」表示该仓库当前检出在同一任务上，是比「仅存在同名分支」更强的信号，报告中必须区分
+- 配置可能包含当前工作区没有的仓库：这些条目直接跳过，不计入「仓库不可用」，不触发停摆；只有当前工作区存在的仓库参与遗漏检测
 - 每个仓库最多列出 5 个改动文件；仓库多时只列命中的
 - 不自动切换、不自动提交、不自动 stash 其他仓库
 

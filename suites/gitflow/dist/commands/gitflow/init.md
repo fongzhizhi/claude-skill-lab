@@ -1,171 +1,176 @@
 ---
 name: "gitflow:init"
-description: 扫描多仓库工作区生成 .claude/gitflow.json 配置草稿：发现兄弟仓库，按环境列表探测远端环境分支，生成并校验草稿，人工确认后落盘；支持单仓库模式。仓库/环境映射无法自动推断、仓库不可用或目标文件已存在时停摆询问，不猜测映射。
+description: 管理唯一的 ~/.claude/gitflow.json：默认只扫描当前仓库，--all 扫描当前仓库父目录下的全部兄弟仓库；探测远端环境分支，创建或增量更新配置。已存在时只更新本次涉及的仓库条目，保留其他条目与手工字段，确认后落盘。无法自动推断映射时停摆询问。
 category: git
 ---
+
 # /gitflow:init
 
-接入 gitflow 的第一步：扫描工作区、探测远端环境分支、生成配置草稿。**先展示、后落盘**；任何无法自动确定的映射都停摆询问，不猜测。
+管理 gitflow 的**唯一配置** `~/.claude/gitflow.json`。默认只处理当前仓库；`--all` 扫描当前仓库所在工作区的全部兄弟仓库。文件不存在则创建，已存在则**增量更新本次涉及的仓库条目**，保留其他仓库与手工字段。
 
-执行前读取 `~/.claude/skills/gitflow-core/SKILL.md` 的 §1.2 / §1.3（字段与校验规则）。本命令**不按 core §1.1 查找配置**——它的任务就是在配置缺失时生成配置；全局默认（`~/.claude/settings.json` 的 `gitflow`）仍可作为默认值来源。
+- 不创建项目/工作区 `.claude/gitflow.json`
+- 不读取 `settings.json` 或其他配置文件，不存在优先级
+- 先展示草稿/变更摘要，确认后落盘；无法自动确定的映射停摆询问，不猜测
+
+执行前读取 `~/.claude/skills/gitflow-core/SKILL.md` 的 §1.2 / §1.3（字段与校验规则）。本命令负责创建/更新配置，不按 core §1.1 的运行时读取流程查找其他文件。
 
 ## 参数
 
 | 参数 | 说明 |
 | --- | --- |
-| `--dir <path>` | 扫描目录；缺省：当前目录在 Git 仓库内时用仓库根目录的父目录，否则用当前目录 |
-| `--repos <a,b,c>` | 只处理指定名称的兄弟仓库；缺省扫描扫描目录下所有直接子仓库 |
-| `--single` | 单仓库模式：只为当前仓库生成配置（`path` 为 `.`），不扫描兄弟仓库；与 `--dir`/`--repos` 互斥 |
-| `--envs <e1,e2,...>` | 环境列表，从低到高，如 `3.1,3.2,4.1,4.2,dev`；缺省读取全局 `gitflow.chain`，都没有则停摆询问 |
-| `--active <e,...>` | 在用环境子集；缺省等于 `--envs` |
-| `--default-env <env>` | 未指定环境时的默认值；缺省为 `active` 最后一项（链式顶端） |
-| `--remote <name>` | 远端名，缺省 `origin`（或全局 `gitflow.remote`） |
-| `--output <path>` | 输出路径；缺省见“输出位置” |
-| `--dry-run` | 只输出草稿与校验结果，不落盘 |
+| `--all` | 扫描当前仓库根目录的父目录下所有直接子仓库，创建/更新这些仓库的条目；缺省只处理当前仓库 |
+| `--envs <e1,e2,...>` | 环境链，从低到高，如 `3.1,3.2,4.1,4.2,dev`；缺省沿用配置中的 `chain`；两者都没有则停摆询问 |
+| `--active <e,...>` | 在用环境子集；缺省沿用配置，否则等于 `chain` |
+| `--default-env <env>` | 未指定环境时的默认值；缺省沿用配置，否则为 `active` 最后一项（链式顶端） |
+| `--remote <name>` | 远端名；缺省沿用配置，否则 `origin` |
+| `--dry-run` | 只输出草稿与变更摘要，不落盘 |
 
 ```text
 /gitflow:init --envs 3.1,3.2,4.1,4.2,dev
-/gitflow:init --envs 4.1,4.2,dev --repos pro-ui,pro-pcb,pro-api
-/gitflow:init --single --envs 4.1,4.2,dev
-/gitflow:init --envs 4.1,4.2,dev --dry-run
+/gitflow:init --all --envs 3.1,3.2,4.1,4.2,dev
+/gitflow:init                     # 配置已存在时，沿用 chain 等字段，只更新当前仓库
+/gitflow:init --all --dry-run
 ```
 
 ## 流程
 
-1. **确定模式与扫描根目录**：
-
-   - `--single`：当前目录必须在 Git 仓库内，仓库根目录（`git rev-parse --show-toplevel`）即目标仓库；`--dir`/`--repos` 同时出现 → 停摆
-   - 否则：`--dir` 有值用 `--dir`；无值且当前目录在仓库内用仓库根目录的父目录；否则用当前目录
-   - 扫描根目录不存在 → 停摆
-
-2. **发现仓库**（扫描模式）：
-
-   - 列出扫描根目录的直接子目录中 `test -e "<dir>/.git"` 为真的（目录或 worktree 的 `.git` 文件均可）
-   - `--repos` 有值时按目录名过滤；指定的名字不存在 → 停摆并列出候选
-   - 一个都没发现时：若扫描根目录本身是 Git 仓库，退化为单仓库（`path` 为 `.`）；否则停摆
-   - 每个仓库用 `git -C <dir> rev-parse --show-toplevel` 规范化根目录；重复根目录去重
-   - 仓库键默认取目录名
-
-3. **确定环境参数**：
-
-   - `--envs` → `chain`；否则全局 `gitflow.chain`；都没有 → 停摆，请用户提供环境列表
-   - `active`：`--active`，缺省等于 `chain`
-   - `default_env`：`--default-env`，缺省 `active` 最后一项
-   - `remote`：`--remote`，缺省全局 `gitflow.remote`，再缺省 `origin`
-   - 校验：`active` 是 `chain` 子集、`default_env` 在 `active` 中；失败 → 停摆
-
-4. **探测远端环境分支**（每个仓库一次）：
+1. **定位当前仓库与工作区**：
 
    ```bash
-   git -C <repo-root> ls-remote --heads <remote>
+   root=$(git -C . rev-parse --show-toplevel)
+   workspace=$(dirname "$root")
+   key=$(basename "$root")
    ```
 
-   `ls-remote` 连接失败 → 停摆并指出仓库与原始错误，不重试。
+   - 当前目录不在 Git 仓库内 → 停摆，要求进入仓库后重跑
+   - 配置路径固定为 `~/.claude/gitflow.json`；不创建其他位置的配置
+   - 单个仓库的 `path` = 仓库根目录相对 `workspace` 的路径（标准布局即目录名 `key`）
 
-   对每个仓库 × 环境，按顺序匹配候选分支：
+2. **确定目标仓库**：
 
-   1. `<仓库键>/<环境>`（如 `pro-ui/4.1`）
-   2. `<环境>`（如 `dev`）
+   - 缺省：只有当前仓库
+   - `--all`：列出 `workspace` 下直接子目录中 `test -e "<dir>/.git"` 为真的仓库（`.git` 目录或 worktree 的 `.git` 文件均可），并确保当前仓库在列表中
+   - 每个仓库用 `git -C <dir> rev-parse --show-toplevel` 规范化根目录，去重
+   - 仓库键 = 仓库根目录名；`path` = 该目录名（相对 `workspace`）；目录名重复时停摆，要求手工处理
+   - `--all` 只扫描直接子仓库，不递归嵌套仓库
 
-   - 恰好命中一个 → 采用
-   - 同时命中两个 → 停摆，让用户指定用哪个
-   - 一个都没命中 → 记为**未解析**，不猜测
+3. **读取现有配置**：
 
-5. **处理未解析映射**：
+   - `~/.claude/gitflow.json` 不存在 → 新建草稿
+   - 已存在 → 读取并解析；JSON 非法或 `version` 不为 `2` → **停摆**，展示文件路径与错误，不覆盖
+   - 记录现有顶层字段与 `repos`；除本次更新字段外，全部原样保留（如 `user`、`branch_pattern`、`branch_types`、`protected`、`mr`、`commit` 及未知字段）
+   - 现有 `repos` 中未被本次扫描到的条目一律保留，不删除
+
+4. **确定全局字段**：
+
+   - `chain`：`--envs` → 否则沿用配置 `chain`；都没有 → 停摆，请用户提供 `--envs`
+   - `active`：`--active` → 否则沿用配置 `active`（须为 `chain` 子集）→ 否则等于 `chain`
+   - `default_env`：`--default-env` → 否则沿用配置 `default_env`（须在 `active` 中）→ 否则 `active` 最后一项
+   - `remote`：`--remote` → 否则沿用配置 `remote` → 否则 `origin`
+   - 显式参数与现有值冲突时，以显式参数为准；现有值非法且未显式覆盖 → 停摆指出字段
+   - 校验：`chain` 非空无重复，`active` 是 `chain` 子集，`default_env` 在 `active` 中
+
+5. **探测每个目标仓库的环境分支**：
+
+   ```bash
+   git -C <root> ls-remote --heads <remote>
+   ```
+
+   连接失败或远端不存在 → 停摆并指出仓库与原始错误，不重试。
+
+   对每个目标仓库 × `chain` 中的环境：
+
+   1. 若现有 `repos.<key>.envs[<env>]` 存在，且该分支仍在远端分支列表中 → **沿用现有映射**（标记“沿用”），不再自动匹配
+   2. 否则按候选匹配：
+      - `<仓库键>/<环境>`（如 `pro-ui/4.1`）
+      - `<环境>`（如 `dev`）
+      - 恰好命中一个 → 采用
+      - 同时命中两个 → 停摆，让用户指定
+      - 一个都没命中 → 记为**未解析**
+   3. 现有映射指向的分支已不存在 → 记为未解析，重新询问
+
+6. **处理未解析映射**：
 
    输出表格（仓库、环境、远端候选分支），停摆询问。例如：
 
    ```text
    以下环境无法自动匹配远端分支：
-     pro-api  4.1  → 远端分支: pro-api/0.3、pro-api/0.4、pro-api/dev
-     pro-api  4.2  → 远端分支: pro-api/0.3、pro-api/0.4、pro-api/dev
-     pro-api  dev  → 远端分支: pro-api/0.3、pro-api/0.4、pro-api/dev
+     pro-api  4.1  → 远端候选: pro-api/0.3、pro-api/0.4、pro-api/dev
+     pro-api  4.2  → 远端候选: pro-api/0.3、pro-api/0.4、pro-api/dev
+     pro-api  dev  → 远端候选: pro-api/0.3、pro-api/0.4、pro-api/dev
 
    请提供映射（可多个环境指向同一分支），例如：
      4.1=pro-api/0.3, 4.2=pro-api/0.4, dev=pro-api/dev
    ```
 
-   - 用户明确给出后才填入；允许同一仓库多个环境映射到同一远端分支（如 `4.1`、`4.2` 都指向 `pro-api/0.3`）
-   - 用户要求跳过某仓库/环境 → 该仓库/环境不写入 `envs`；后续命令用到时按 core 停摆
+   - 用户明确给出后才填入；允许同一仓库多个环境映射到同一远端分支
+   - 用户要求跳过某仓库/环境 → 该环境不写入该仓库的 `envs`；后续命令用到时按 core 停摆
    - 未得到明确答案 → 停摆，不生成草稿
 
-6. **确定输出位置与路径基准**：
+7. **合并草稿**：
 
-   - `--single`：缺省 `<当前仓库>/.claude/gitflow.json`
-   - 扫描模式：缺省 `<扫描根目录>/.claude/gitflow.json`
-   - `--output` 覆盖（相对路径按当前目录解析）
-   - 配置 base = 输出文件所在目录；若目录名为 `.claude` 则取其上一级（与 core §1.1 一致）
-   - 每个仓库的 `path` = 仓库根目录相对 base 的路径，分隔符统一为 `/`；同一目录写 `"."`
-   - 例：`<workspace>/.claude/gitflow.json` → `"pro-ui": {"path": "pro-ui"}`；`<repo>/.claude/gitflow.json` → `"path": "."`
-
-7. **生成草稿**（最小完整结构，不写可选默认值）：
-
-   ```json
-   {
-     "version": 2,
-     "remote": "origin",
-     "chain": ["3.1", "3.2", "4.1", "4.2", "dev"],
-     "active": ["4.1", "4.2", "dev"],
-     "default_env": "dev",
-     "repos": {
-       "pro-ui": {
-         "path": "pro-ui",
-         "envs": {
-           "dev": "pro-ui/dev",
-           "4.2": "pro-ui/4.2",
-           "4.1": "pro-ui/4.1"
-         }
-       },
-       "pro-api": {
-         "path": "pro-api",
-         "envs": {
-           "dev": "pro-api/dev",
-           "4.2": "pro-api/0.4",
-           "4.1": "pro-api/0.3"
-         }
-       }
-     }
-   }
-   ```
+   - 以现有配置为基底（不存在则新建），更新 `version`、`remote`、`chain`、`active`、`default_env`
+   - 对每个目标仓库写入/更新 `repos.<key>`：
+     - `path` = 仓库目录名（相对 `workspace`）
+     - `envs` = 本次解析出的环境映射；保留该条目下未知的仓库级字段
+     - 现有条目中不属于新 `chain` 的环境键移除（配置已无效），在摘要中列出
+   - 未扫描的仓库条目保持原样
+   - 现有 `repos` 中若存在 `envs` 键不在新 `chain` 中，且该仓库未被本次扫描 → **停摆**，提示先在对应工作区运行 `/gitflow:init --all` 更新，或手工修正；不写入非法配置
 
 8. **校验草稿**（按 core §1.3）：
 
-   - `version` 为 2；`chain` 非空无重复；`active` 是 `chain` 子集
-   - `default_env` 在 `active` 中
-   - 每个 `repos.*.path` 解析后存在且是 Git 仓库根目录
-   - 每个 `envs` 键在 `chain` 中，值在对应仓库远端分支列表中存在
+   - `version` 为 `2`；`chain` 非空无重复；`active` 是 `chain` 子集；`default_env` 在 `active` 中
+   - 每个目标仓库 `path` 解析后存在且是 Git 仓库根目录
+   - 目标仓库每个 `envs` 键在 `chain` 中，值在对应仓库远端分支列表中存在
+   - 保留仓库的 `envs` 键都在新 `chain` 中（路径存在性不检查，可能属于其他本地工作区）
    - 任一失败 → 停摆，指出仓库/字段，不落盘
 
-9. **展示草稿与摘要**，等待用户确认：
+9. **展示草稿与变更摘要**，等待用户确认：
 
    ```text
-   配置草稿（3 个仓库，9 条环境映射）：
-     pro-ui   path=pro-ui   dev→pro-ui/dev  4.2→pro-ui/4.2  4.1→pro-ui/4.1
-     pro-pcb  path=pro-pcb  dev→pro-pcb/dev 4.2→pro-pcb/4.2 4.1→pro-pcb/4.1
-     pro-api  path=pro-api  dev→pro-api/dev 4.2→pro-api/0.4 4.1→pro-api/0.3
+   配置文件: C:/Users/<用户>/.claude/gitflow.json（更新 / 新建）
+   环境链: 3.1,3.2,4.1,4.2,dev（沿用配置 / --envs）
+   在用环境: 4.1,4.2,dev
+   默认环境: dev
+   远端: origin
 
-   目标文件: D:/Code/GitEditor/editor-pro/.claude/gitflow.json
-   确认写入？
+   本次处理:
+     pro-ui  更新   dev→pro-ui/dev  4.2→pro-ui/4.2  4.1→pro-ui/4.1
+     pro-pcb 新增   dev→pro-pcb/dev 4.2→pro-pcb/4.2 4.1→pro-pcb/4.1
+   保留未扫描:
+     pro-sch、pro-api（共 2 个）
+   移除的过期环境键:
+     pro-ui: 3.2（不在新 chain 中）
+
+   确认写入 ~/.claude/gitflow.json？
    ```
 
-   - 目标文件已存在 → **停摆**，展示路径，询问“覆盖（仅在你明确确认后）/ 另存为其他路径（`--output`）/ 取消”；绝不静默覆盖
+   - 草稿内容与现有配置完全一致 → 输出“配置已是最新，无需写入”，结束，不重复落盘
    - 用户未确认 → 结束，不写文件
+   - `--dry-run`：展示后结束，不写文件
 
 10. **落盘**：
 
-    - 创建 `.claude` 目录（如不存在）
-    - 以 2 空格缩进、UTF-8 写入；不修改 `.gitignore`
-    - `--dry-run`：到此为止，只输出草稿、摘要与目标路径
+    - 确保 `~/.claude` 存在
+    - 以 2 空格缩进、UTF-8、末尾换行写入 `~/.claude/gitflow.json`
+    - 只写这一个文件；不创建 `.claude/gitflow.json`，不修改 `settings.json`
+    - 写入失败 → 停摆并输出原始错误
 
-11. **输出结果**：配置文件路径、仓库数、环境映射数、下一步（从任意仓库运行 `/gitflow:start` 验证；工作区根目录的配置不在任何仓库内，如需团队共享可复制到各仓库的 `.claude/gitflow.json`）。
+11. **输出结果**：
+
+    - 配置文件路径、新建/更新、本次新增/更新/保留的仓库数、环境链
+    - 下一步：在当前仓库运行 `/gitflow:start` 验证；其他工作区无需再生成配置，直接使用同一份 `~/.claude/gitflow.json`
+    - 若某个克隆的仓库目录名不同，在该克隆运行 `/gitflow:init` 会新增/更新对应目录名的条目，不影响已有条目
 
 ## 停摆条件
 
 通用停摆条件见 core §5。本命令特有：
 
-- `--single` 与 `--dir`/`--repos` 冲突，或当前目录不在 Git 仓库内
-- 扫描不到仓库、指定仓库不存在、仓库不可用
-- 环境列表缺失、`active`/`default_env` 非法
-- 远端分支探测失败，或候选分支同时命中/无法自动匹配且用户未给出明确映射
-- 草稿校验失败
-- 目标文件已存在且用户未明确确认覆盖
+- 当前目录不在 Git 仓库内
+- 现有 `~/.claude/gitflow.json` 不是合法 JSON 或 `version` 不为 `2`
+- 没有 `--envs` 且现有配置没有 `chain`
+- `active` / `default_env` 非法且未显式覆盖
+- 远端分支探测失败
+- 候选分支同时命中或无法自动匹配，且用户未给出明确映射
+- 新旧 `chain` 冲突导致保留仓库存在过期 `envs` 键，且用户未处理
+- 仓库目录名重复、草稿校验失败、写入失败

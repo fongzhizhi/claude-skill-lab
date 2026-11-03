@@ -7,7 +7,7 @@ category: git
 
 为当前任务分支创建合入环境分支的 MR，并在创建前做只读冲突预检。**执行前必须先读取 `~/.claude/skills/gitflow-core/SKILL.md`**。
 
-> v0.3 只创建“任务分支 → 所属环境”的 MR。环境链提升（4.1 → 4.2 → dev）属于后续 `/gitflow:promote`，不在本命令内自动执行。
+> v0.4 只创建“任务分支 → 所属环境”的 MR。环境链提升（4.1 → 4.2 → dev）属于后续 `/gitflow:promote`，不在本命令内自动执行。
 
 ## 参数
 
