@@ -6,7 +6,7 @@
       "required": true
     },
     {
-      "name": "glab（GitLab CLI，/git-flow-merge 自动创建 MR 用）",
+      "name": "glab（GitLab CLI；内网 GitLab 需 glab auth login --hostname <内网域名> 或设置 GITLAB_HOST）",
       "check": "glab --version",
       "install": "winget install glab.glab",
       "required": false

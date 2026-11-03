@@ -2,6 +2,32 @@
 
 <!-- 记录 suites/git-flow/ 的每次变更。 -->
 
+## v0.2.0（2026-11-03）
+
+基于 [project-docs/plans/git-flow-improvements.md](../../project-docs/plans/git-flow-improvements.md) 的反馈优化。
+
+### 新增
+
+- `/git-flow-init`：扫描多仓库工作区、`git ls-remote` 探测环境分支、生成并校验 `.claude/git-flow.json` 草稿，确认后落盘；支持 `--single`、`--dry-run`、`--envs`/`--active`/`--default-env`/`--repos`
+- 多仓库遗漏检测（core §2.5）：commit / sync / merge 开头只读扫描其他配置仓库的未提交改动、同名任务分支与不可用路径，命中停摆提醒
+- `--repo <name>`：四个执行命令支持显式操作配置中的兄弟仓库，会话无需切换目录
+- `/git-flow-start --repos <a,b,c|all>`：为兄弟仓库创建同名对齐任务分支（`git branch --no-track`，只创建不切换）
+
+### 变更
+
+- 配置版本升到 `2`：`repos.*.path` 改为相对配置文件基准目录（`.claude` 的上一级）解析，修复同一份多仓库配置在不同仓库内解析不一致的问题
+- `/git-flow-merge`：`fetch` 提前到推送状态校验之前；`merge-tree` 预检报告注明目标分支快照 `<hash>`，提示服务端合并时可能已前进
+- `/git-flow-sync`：description 与文档统一为“环境分支 → 任务分支”，修正方向歧义
+- 各命令“停摆条件”收敛为“通用项引用 core + 命令特有项”
+- glab 适配：补充内网 GitLab 的 `glab auth login --hostname` / `GITLAB_HOST` 指引；描述优先用临时文件与 `--description-file`（以 `--help` 为准）；手动入口按 core §7 从远端 URL 推导 Web 地址并对分支名 URL 编码
+- 配置新增 `commit.checks` 预留字段（v0.2 不执行）
+- `/git-flow-commit` 文档补充 `--repo` 与多仓库检测步骤
+
+### 文档
+
+- 配置参考新增：`/git-flow-init` 用法、工作区多仓库示例、`pro-api` 非同构分支示例、`commit.checks`、手动 MR Web 地址推导、版本 2 检查清单
+- README 更新命令表、多仓库协同说明与配置版本
+
 ## v0.1.1（2026-11-02）
 
 - `/git-flow-commit` 对齐 format-keeper v0.2.0：格式化步骤内部会执行 `git add -A`，并优先 `prettier:auto` / `lc-build`

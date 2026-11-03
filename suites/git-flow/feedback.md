@@ -2,6 +2,30 @@
 
 <!-- 记录使用过程中发现的问题与改进建议。 -->
 
+## v0.2.0 优化（2026-11-03）
+
+- 来源：[project-docs/plans/git-flow-improvements.md](../../project-docs/plans/git-flow-improvements.md)（基于 v0.1.0 的多仓库环境使用反馈）
+- 采纳并落地：
+  - P0-1 多仓库协同三步：遗漏检测（默认只读提醒）、`--repo <name>` 显式操作兄弟仓库、`/git-flow-start --repos` 创建对齐分支
+  - P0-2 `/git-flow-init`：扫描仓库、探测远端环境分支、草稿确认后落盘
+  - P1 全部校准项：glab 内网登录指引、多行描述临时文件、glab 参数 `--help` 校准提示、手动入口 URL 推导与编码、pro-api 非同构示例、merge 先 fetch 后比较、预检注明快照
+  - P2-2 sync 方向措辞、P2-3 停摆条件去重、P2-4 `commit.checks` 预留
+- 决策：
+  - 遗漏检测是“停摆提醒”而非硬拦截：用户确认后可继续，避免与当前任务无关的改动反复阻塞
+  - 兄弟仓库对齐分支用 `git branch --no-track` 创建但不切换，避免未经确认改变其他仓库工作区
+  - 配置 `path` 改为相对配置文件基准目录解析，配置版本升到 `2`；v1 配置明确停摆并提示重新生成
+  - init 对无法自动匹配的环境分支（如 `pro-api/0.3`）一律停摆询问，允许多个环境映射到同一分支
+  - merge 的 fetch 提前到推送状态校验之前，预检报告注明快照 hash，不把“无冲突”包装成服务端保证
+  - glab 描述优先用临时文件 + `--description-file`，实际参数以 `--help` 为准；不支持时退回 `--description "$(cat ...)"`
+  - 暂缓：`/git-flow-promote`（等实际遇到环境提升需求）、`commit.checks` 实际执行、已合并分支清理（GitLab 自动删除已覆盖大半）
+- 待实测：
+  - 工作区多仓库遗漏检测的提醒频率与噪音（当前任务无关改动是否过多）
+  - `git branch --no-track` 在 Windows 中文/带空格路径下的表现
+  - 内网 GitLab 的 glab 认证与 `--description-file` 实际参数名
+  - `git ls-remote` 在仓库多、网络慢时的 init 耗时
+  - 工作区根目录配置与仓库内配置同时存在时的匹配行为
+  - merge 预检快照措辞是否足以避免过度信任“无冲突”
+
 ## 初始创建（2026-11-02）
 
 - 需求来源：[project-docs/plans/git-flow.md](../../project-docs/plans/git-flow.md)；经评估后用户确认：环境分支采用链式同步、未指定环境默认链式顶端（通常 `dev`）、异常停摆询问用户、指令名改为 `git-flow-*`、提交前走“add → 格式化 → 乱码修复 → add → commit-draft → commit → push”。
