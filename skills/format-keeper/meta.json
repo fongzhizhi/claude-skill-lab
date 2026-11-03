@@ -1,0 +1,14 @@
+{
+  "dependencies": [
+    {
+      "name": "Node.js / npm（读取 package.json、执行 prettier:auto）",
+      "check": "npm --version",
+      "required": true
+    },
+    {
+      "name": "lc-build（内部格式化 CLI，prettier:auto 缺失时使用）",
+      "check": "lc-build --version",
+      "required": false
+    }
+  ]
+}

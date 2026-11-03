@@ -107,7 +107,7 @@ git add -A → format-keeper → mojibake-fixer → git add -A
            → commit-draft → git commit → git push
 ```
 
-- 格式化或乱码检查失败 → 停摆，不提交
+- 格式化 `failed` 或乱码检查失败 → 停摆，不提交；格式化 `skipped` → 记录警告后继续
 - 疑似敏感文件（`.env`、`*.key` 等）→ 停摆确认
 - 推送非快进/权限失败 → 停摆，绝不 force
 - v0.1 暂不包含 TS 类型检查与单元测试，后续按需加入

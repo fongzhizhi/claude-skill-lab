@@ -2,6 +2,10 @@
 
 <!-- 记录 suites/git-flow/ 的每次变更。 -->
 
+## v0.1.1（2026-11-02）
+
+- `/git-flow-commit` 对齐 format-keeper v0.2.0：格式化步骤内部会执行 `git add -A`，并优先 `prettier:auto` / `lc-build`
+
 ## v0.1.0（2026-11-02）
 
 - 初始版本：4 个命令 + 共享核心技能 + 配置参考文档

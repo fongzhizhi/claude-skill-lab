@@ -1,52 +1,59 @@
 # format-keeper
 
-> 按项目已有工具统一代码格式：默认只处理 git 变更文件，可独立运行，也可内嵌到 git-flow 提交流水线。
+> 提交前统一格式化：先暂存全部改动，再优先执行项目 `prettier:auto`，没有则用 `lc-build prettier`，失败才回退到 `package.json` 的暂存区脚本。
 
-`format-keeper` 解决“提交前统一格式”这一步：它不替项目决定用什么工具，只检测项目已有的 Prettier / ESLint / Biome / 语言 formatter，并**只对目标文件**执行。仓库级格式化、创建配置、自动安装依赖都不在范围内；没有可用工具时报告跳过，不阻塞流程。
+`format-keeper` 解决“提交前统一格式”这一步。它优先适配内部开发环境的工作流：不再按 Prettier / ESLint / Biome 配置文件自行选型，而是**项目有 `prettier:auto` 就直接跑，没有就用 `lc-build prettier` 处理本次全部 `git diff` 文件，两者都报错才分析 `package.json` 里作用于当前暂存区的脚本**。没有可用命令时报告跳过，不阻塞提交流程。
 
 ## 功能
 
 | 能力 | 说明 |
 | --- | --- |
-| 默认范围 | git 变更文件（暂存 + 未暂存 + 未跟踪），开箱即用 |
-| 指定目标 | 文件 / 目录 / `--staged` / `--check` |
-| 项目驱动 | 按 package 脚本、配置文件、语言项目文件自动选择工具 |
-| 安全边界 | 只格式化目标文件；不仓库级、不创建配置、不安装依赖、不改语义 |
+| 统一范围 | 先 `git add -A`，再格式化 `git diff HEAD` 的全部变更文件（排除删除），不区分暂存/未暂存/未跟踪 |
+| 内部工作流优先 | `npm run prettier:auto` → `lc-build prettier -- --write` |
+| 失败才回退 | 主命令报错后，只接受 `package.json` 中作用于当前暂存区的脚本（`lint-staged`、`*:staged`、`git diff --cached`） |
+| 安全边界 | 冲突文件、未跟踪敏感文件暂停；不创建配置、不安装依赖、不改语义 |
 | 可内嵌 | 输出 `formatted / no_changes / skipped / failed` 状态，供 `/git-flow-commit` 判断停或继续 |
 | 与 keeper 分工 | 纯格式化；命名/魔法数字/结构交给 `style-keeper`，乱码交给 `mojibake-fixer` |
 
 ## 前置依赖
 
-无强制外部 CLI 依赖。运行时使用目标项目已有的格式化工具：
+| 依赖 | 说明 |
+| --- | --- |
+| Node.js / npm | 读取 `package.json`、执行 `prettier:auto`；`meta.json` 中为必需依赖 |
+| `lc-build`（内部 CLI） | 没有 `prettier:auto` 时执行 `lc-build prettier`；`meta.json` 中标记为可选，缺失时走回退或跳过 |
 
-- JS/TS：Prettier、ESLint、Biome（项目内安装即可）
-- 其他语言：rustfmt、gofmt、clang-format、ruff/black、shfmt 等（按项目存在情况）
-- 无可用工具时报告跳过，不自动安装、不创建配置
-
-因此不生成 `meta.json`：工具随目标项目变化，不适合声明为全局前置依赖。
+目标项目侧的 `prettier:auto` 脚本与 `lc-build` 环境由项目/开发机提供，本技能不自动安装。
 
 ## 部署
 
 ```bash
-lab deploy format-keeper
+claude-lab deploy format-keeper
 ```
 
 部署后：`dist/skills/format-keeper/SKILL.md` → `~/.claude/skills/format-keeper/SKILL.md`
 
 ## 使用
 
-- **自动触发**：对话中出现“格式化代码”“统一格式”“跑一下 prettier/eslint --fix”等意图时使用。
-- **手动调用**：`/format-keeper`，可附参数：
+- **自动触发**：对话中出现“格式化代码”“统一格式”“提交前跑一下格式化”等意图时使用。
+- **手动调用**：`/format-keeper`。
 
 ```text
-/format-keeper                     # 格式化本次 git 变更文件
-/format-keeper src/utils           # 格式化指定目录
-/format-keeper src/app.ts          # 格式化指定文件
-/format-keeper --staged            # 只格式化已暂存文件
-/format-keeper --check             # 只检查不写入
+/format-keeper
 ```
 
-输出摘要包含：工具、目标文件数、已格式化/无变化/跳过/失败、变更文件清单、失败原因。
+执行顺序：
+
+```text
+git add -A
+→ package.json 有 prettier:auto ? npm run prettier:auto
+                              : git diff HEAD --name-only --diff-filter=d | xargs lc-build prettier -- --write
+→ git add -A
+→ 命令报错时才分析 package.json 的暂存区脚本；没有则 skipped
+```
+
+执行后会把工作区所有变更加入暂存区并格式化。输出摘要包含：状态、来源（`prettier:auto` / `lc-build` / package 脚本）、目标文件数、主命令错误、回退结果。
+
+> 本技能会改写暂存区；如果只想检查而不暂存/写入，当前版本不提供 `--check`，请手动执行只读命令或先备份改动。
 
 ## 内嵌到提交流水线
 
@@ -56,11 +63,12 @@ lab deploy format-keeper
 git add . → format-keeper → mojibake-fixer → git add . → commit-draft → git commit → git push
 ```
 
+- `format-keeper` 内部也会执行 `git add -A`，调用方的暂存步骤可以保留，重复执行无副作用
 - `formatted` / `no_changes` / `skipped` → 继续
 - `failed` → 停摆，先解决格式化错误再提交
 
 ## 与其他模块的关系
 
-- [style-keeper](../style-keeper/README.md)：TS 风格治理（命名、魔法数字、结构）；本技能只做纯格式化，两者边界清晰
+- [style-keeper](../style-keeper/README.md)：TS 风格治理（命名、魔法数字、结构）；本技能只做纯格式化
 - [mojibake-fixer](../../commands/mojibake-fixer/README.md)：乱码扫描与修复；本技能不处理乱码
 - [commit-draft](../../commands/commit-draft/README.md)：生成 commit message；本技能不提交

@@ -72,9 +72,10 @@ category: git
 
    退出码 `0` → 报告“没有可提交的改动”，结束（不提交、不推送）。
 
-5. **格式化**：读取 `~/.claude/skills/format-keeper/SKILL.md`，按规则对本次 git 变更文件执行格式化。
+5. **格式化**：读取 `~/.claude/skills/format-keeper/SKILL.md`，按规则执行。该技能会先 `git add -A`，再按 `prettier:auto` → `lc-build` → `package.json` 暂存区脚本的顺序格式化；成功后再次 `git add -A`。
 
    - 技能不存在 → 停摆，提示 `claude-lab deploy format-keeper`
+   - 第 3 步用户已明确确认敏感文件时，调用时说明该确认，避免 format-keeper 重复拦截
    - 状态 `formatted` / `no_changes` / `skipped` → 继续
    - 状态 `failed` → 停摆，输出原始错误，不提交
 
@@ -141,7 +142,7 @@ category: git
 
 ### 执行
 1. git add -A: 3 个文件
-2. format-keeper: formatted（Prettier，2 个文件）
+2. format-keeper: formatted（prettier:auto，2 个文件）
 3. mojibake-fixer: 无乱码
 4. git add -A: 2 个文件
 5. commit-draft: fix(ui): 修复背景色丢失 (PRO-159115)

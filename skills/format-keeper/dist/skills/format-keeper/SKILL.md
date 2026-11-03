@@ -1,138 +1,138 @@
 ---
 name: format-keeper
-description: 按项目已有工具统一代码格式（Prettier / ESLint --fix / Biome / rustfmt / gofmt / clang-format 等），默认只处理 git diff 变更文件，支持指定文件或目录与 --check；只做纯格式化，不改语义、不创建配置、不做仓库级格式化，无可用工具时报告跳过。作为 git-flow 提交流水线的格式化步骤，可独立运行或被其他命令内嵌引用。
-version: 0.1.0
+description: 提交前统一格式化。默认先在仓库根 git add -A，再对 git diff HEAD 的全部变更文件执行格式化：优先 npm run prettier:auto；没有该脚本则用 lc-build prettier；仅当命令报错时才分析 package.json 中作用于当前暂存区的格式化脚本，没有则跳过。会改写暂存区，不改语义、不创建配置、不安装依赖。
+version: 0.2.0
 ---
 # format-keeper
 
-纯格式化执行者：**只跑目标项目已有的格式化工具，不替项目做格式化决策**。
+提交前的纯格式化执行者，优先适配内部开发环境：**项目有 `prettier:auto` 就用它，没有就用 `lc-build prettier`，两者都报错才回退到 `package.json` 里的暂存区脚本**。
 
 ## 核心原则
 
 | 原则 | 说明 |
 | --- | --- |
-| 只格式化目标文件 | 默认本次 git 变更文件；绝不执行 `prettier --write .`、`eslint --fix .` 这类仓库级操作 |
-| 不改语义 | 只做空白、缩进、换行、引号、尾逗号等格式调整；命名、魔法数字、结构、注释内容不在本技能范围 |
-| 不创建/修改配置 | ESLint / Prettier / Biome 配置是项目级决策，本技能只读取并执行，不生成、不改写 |
-| 不自动安装依赖 | 工具缺失时报告并跳过，不执行 `npm install`，也不触发 `npx` 的联网安装 |
-| 失败即停 | 工具执行报错 → 停，输出原始错误；无工具可用 → 报告 `skipped`，不阻塞调用方 |
-| 不处理乱码 | U+FFFD / 编码错位交给 `mojibake-fixer`；格式化后发现乱码时提示调用方先修复 |
+| 统一全量范围 | 不区分暂存区/普通变更区：先 `git add -A`，再格式化 `git diff HEAD` 的全部变更文件（排除删除） |
+| 项目工作流优先 | 优先执行项目已定义的 `prettier:auto`；没有才调用内部 `lc-build prettier` |
+| 失败才回退 | 只有上述命令报错，才分析 `package.json` 中作用于当前暂存区的格式化脚本；没有则 `skipped` |
+| 会写暂存区 | 开始和格式化成功后都执行 `git add -A`；这是本技能的固有行为，调用方无需重复暂存 |
+| 不改语义 | 只做空白、缩进、换行、引号、尾逗号等格式调整；命名、魔法数字、结构、注释内容不在范围内 |
+| 不创建/修改配置 | 只读取并执行项目已有脚本，不生成、不改写 Prettier/ESLint/Biome 配置 |
+| 不自动安装 | 不执行 `npm install`，不触发 `npx` 联网安装 |
+| 失败即停 | 回退脚本执行报错、暂存失败、敏感文件/冲突检查不通过 → `failed`，调用方停摆 |
+| 不处理乱码 | U+FFFD / 编码错位交给 `mojibake-fixer` |
 
-与 `style-keeper` 的边界：`style-keeper` 管 TS 命名、魔法数字、文件组织等**风格治理**；本技能只管**纯格式化**，不碰命名与结构。两者都可能以 ESLint / Prettier 为底层工具，但目标不同。
+与 `style-keeper` 的边界：`style-keeper` 管 TS 命名、魔法数字、文件组织等**风格治理**；本技能只管**纯格式化**，不碰命名与结构。
 
-## 确定目标文件
+> `prettier:auto` 即使作用于整个仓库也直接执行——这是项目自己定义的工作流，不属于本技能自行扩大范围。`lc-build` 路径只处理本次 `git diff` 文件。
 
-### 默认模式（git 变更文件）
+## 执行流程
+
+所有命令在仓库根目录执行；当前目录不是仓库根时先 `cd <root>`（`<root>` 由 `git rev-parse --show-toplevel` 得到）。`npm run` / `lc-build` 依赖当前目录，不能只加 `git -C` 而留在子目录。
+
+### 1. 前置检查
+
+**冲突文件**：
 
 ```bash
-git diff --name-only --diff-filter=ACMR -z HEAD
-git ls-files --others --exclude-standard -z
+git -C <root> diff --name-only --diff-filter=U
 ```
 
-合并去重（保留相对路径）。没有目标文件 → 输出“没有可格式化的变更文件”并结束。
+有输出 → `failed`，列出冲突文件，提示先解决冲突；**不执行 `git add`**（避免把冲突文件标记为已解决）。
 
-### 手动指定
+**未跟踪的敏感文件**（只检查会被 `git add -A` 新加入的文件）：
 
-| 参数 | 行为 |
-| --- | --- |
-| `<文件路径>` | 只处理该文件；路径不存在 → 停 |
-| `<目录路径>` | 递归处理目录内可格式化的文本文件（排除忽略目录） |
-| `--staged` | 只处理已暂存文件（`git diff --cached --name-only --diff-filter=ACMR -z`） |
-| `--check` | 只检查不写入，报告“将会被格式化”的文件 |
-
-### 过滤规则
-
-以下文件不传给格式化工具：
-
-- 目录：`node_modules/`、`.git/`、`dist/`、`build/`、`out/`、`coverage/`、`.next/`、`.nuxt/`、`target/`、`vendor/`、`Pods/`、`venv/`、`.venv/`、`__pycache__/`
-- 锁文件：`package-lock.json`、`pnpm-lock.yaml`、`yarn.lock`、`bun.lockb`、`Cargo.lock`、`go.sum`、`poetry.lock`、`Pipfile.lock`、`composer.lock`、`Gemfile.lock`
-- 生成/压缩文件：`*.min.js`、`*.min.css`、`*.map`、`*.generated.*`、`*.g.*`、`__snapshots__/`
-- 二进制/媒体：图片、字体、音视频、压缩包等（按扩展名排除，不要尝试读取）
-- 含冲突标记的文件：命中 `<<<<<<< ` / `>>>>>>> ` 时**停**，先让用户解决冲突
-
-`.gitignore` 已由 `--exclude-standard` 处理；工具的 `.prettierignore` / `.eslintignore` 由工具自身处理，本技能不重复实现。
-
-## 检测并选择格式化工具
-
-**只读取项目已有配置与脚本，不创建、不安装。** 先读 `package.json`（若存在），按以下顺序确定工具。
-
-### 1. 项目脚本
-
-识别 `package.json` 的 `format` / `format:fix` / `lint:fix` / `fix` 脚本，读取其命令：
-
-| 脚本内容 | 处理 |
-| --- | --- |
-| 含 `prettier` | 直接调用 Prettier，把 `.` / `src/` 等仓库级目标替换为**目标文件列表** |
-| 含 `eslint` | 直接调用 ESLint `--fix`，传目标文件 |
-| 含 `biome` | 直接调用 Biome，传目标文件 |
-| 其他自定义脚本 | **不直接执行**（可能格式化整个仓库）；报告“脚本无法安全限定文件范围”，回退到配置检测 |
-
-不要执行 `npm run format` 这类可能作用于整个仓库的脚本；命令必须带目标文件。脚本里有 `--config`、`--cache` 等选项时保留，只替换仓库级目标。
-
-### 2. 配置文件与工具
-
-| 工具 | 检测信号 | 适用扩展名 | 写入命令 |
-| --- | --- | --- | --- |
-| Biome | `biome.json` / `biome.jsonc` | js/jsx/ts/tsx/json/jsonc/css | `<pm> biome format --write <files>` |
-| Prettier | `.prettierrc*`、`prettier.config.*`、`package.json#prettier` | js/jsx/ts/tsx/mjs/cjs/json/jsonc/json5/css/scss/less/html/vue/svelte/md/mdx/yaml/yml/graphql/gql | `<pm> prettier --write --ignore-unknown <files>` |
-| ESLint | `eslint.config.*`、`.eslintrc*`、`package.json#eslintConfig` | js/jsx/ts/tsx/mjs/cjs/vue/svelte | `<pm> eslint --fix <files>` |
-| rustfmt | `Cargo.toml` 或 `rustfmt.toml` / `.rustfmt.toml` | rs | `rustfmt <files>` |
-| gofmt | `go.mod` | go | `gofmt -w <files>` |
-| clang-format | `.clang-format` / `_clang-format` | c/cc/cpp/cxx/h/hpp/hxx | `clang-format -i <files>` |
-| Ruff | `pyproject.toml` 含 `[tool.ruff]` | py | `ruff format <files>` |
-| Black | `pyproject.toml` 含 `[tool.black]` 或 `.black` | py | `black <files>` |
-| shfmt | 已安装 `shfmt` | sh/bash | `shfmt -w <files>` |
-
-`<pm>` 的选取：
-
-1. `package.json` 的 `packageManager` 字段：`pnpm@` → `pnpm exec`，`yarn@` → `yarn`，`bun@` → `bunx`，`npm@` → `npx --no-install`
-2. 否则按锁文件：`pnpm-lock.yaml` → `pnpm exec`，`yarn.lock` → `yarn`，`bun.lockb` → `bunx`，`package-lock.json` / `npm-shrinkwrap.json` → `npx --no-install`
-3. 都没有 → `npx --no-install`
-4. `node_modules/.bin/<tool>` 存在时优先直接用该路径，避免联网解析
-
-**同时存在多个工具时**：
-
-- 项目脚本已定义顺序 → 按脚本顺序，但只传目标文件
-- 无脚本 → ESLint `--fix` 先执行，Prettier 最后执行（让格式以 Prettier 为准）；Biome 存在时优先 Biome，不再叠加 Prettier / ESLint
-- 不同扩展名交给对应工具；不要把工具不支持的扩展名传给它
-
-### 3. 无可用工具
-
-报告：
-
-```text
-未发现可用的格式化工具（无 format 脚本 / Prettier / ESLint / Biome / 语言 formatter）。
-跳过格式化，不阻塞后续流程。
-建议：在项目中落地 Prettier 或 ESLint 配置，或添加 format 脚本。
+```bash
+git -C <root> ls-files --others --exclude-standard
 ```
 
-这是 `skipped`，不是 `failed`。
+命中以下模式 → `failed`，列出文件，让用户确认或加入 `.gitignore`；不擅自删除、不擅自修改 `.gitignore`。若调用方（如 `/git-flow-commit`）已在本轮明确获得用户对这些文件的提交确认，可继续：
 
-### 4. 工具存在但无法安全执行
+- `.env`、`.env.*`（`.env.example`、`.env.sample`、`.env.template` 除外）
+- `*.pem`、`*.key`、`*.p12`、`*.pfx`、`id_rsa`、`id_ed25519`
+- `credentials*`、`secrets.*`
 
-例如：脚本是自定义命令、配置存在但工具未安装、`npx --no-install` 找不到二进制。输出具体原因，归类为 `failed`（配置存在但执行不了）或 `skipped`（项目本来就没有工具）。不要自动安装。
+### 2. 统一暂存
 
-## 执行
+```bash
+git -C <root> add -A
+```
 
-1. 读取目标文件列表，过滤、去重、排序。
-2. 按扩展名分组，选择工具与命令。
-3. 批量执行：文件数 ≤ 50 可一次传入；超过时按 50 个一批，避免命令行过长。
-4. 路径含空格/中文时加引号；不要用未加引号的变量拼接。
-5. `--check` 模式：Prettier `--check`、ESLint 不加 `--fix`、Biome `check` 不加 `--write`、gofmt `-l`、rustfmt `--check`、clang-format `--dry-run --Werror`；工具返回非零表示“有文件需要格式化”，不是失败。
-6. 写入模式：工具返回非零 → `failed`，停止并把原始错误贴给用户。
-7. 执行后对比 `git status --porcelain` 前后差异，确认**只有目标文件**被修改；若出现目标范围外的文件变化 → 停，报告“工具改动了范围外文件”，不要自动回滚。
+等价于仓库根执行 `git add .`，同时记录删除。失败 → `failed`，输出原始错误。
 
-## 输出
+### 3. 确定目标文件
+
+```bash
+git -C <root> diff HEAD --name-only --diff-filter=d
+```
+
+- 输出为空 → `no_changes`，结束
+- 有输出即目标文件；**不按暂存区/未暂存区拆分，也不排除未跟踪文件**（上一步已加入暂存区）
+
+### 4. 优先执行 `prettier:auto`
+
+在仓库根目录先判断脚本是否存在：
+
+```bash
+node -e "try{const p=require('./package.json');process.exit(p.scripts&&p.scripts['prettier:auto']?0:1)}catch(e){process.exit(1)}"
+```
+
+- 退出码 `0` → 脚本存在，执行：
+
+  ```bash
+  cd <root> && npm run prettier:auto
+  ```
+
+  - 成功 → `git -C <root> add -A`，状态 `formatted`，工具记为 `prettier:auto`，结束
+  - 失败 → 记录原始错误，进入第 6 步回退；**不再尝试 `lc-build`**
+
+- 退出码非 `0`（无脚本或 `package.json` 不存在）→ 进入第 5 步
+
+### 5. 无 `prettier:auto`：执行 `lc-build`
+
+先确认目标文件非空（第 3 步已确认），然后：
+
+```bash
+cd <root> && git diff HEAD --name-only --diff-filter=d | xargs lc-build prettier -- --write
+```
+
+- 成功 → `git -C <root> add -A`，状态 `formatted`，工具记为 `lc-build prettier`，结束
+- 失败 → 记录原始错误，进入第 6 步回退
+- 管道左侧 `git diff` 失败时直接 `failed`，不把空输入传给 `lc-build`
+- 路径含空格或中文导致 `xargs` 拆分错误时，改用：
+
+  ```bash
+  cd <root> && git diff HEAD --name-only --diff-filter=d -z | xargs -0 lc-build prettier -- --write
+  ```
+
+### 6. 回退：分析 `package.json` 的暂存区脚本
+
+只有第 4 步的 `npm run prettier:auto` 或第 5 步的 `lc-build` **执行报错**才进入本步；`prettier:auto` 不存在不算报错，直接走第 5 步。读取 `package.json` 的 `scripts`，只接受**明确作用于当前暂存区**的格式化脚本：
+
+1. 命令含 `lint-staged`（如 `lint-staged`、`lint-staged --diff`）
+2. 脚本名含 `staged`（如 `format:staged`、`prettier:staged`）
+3. 命令含 `git diff --cached` / `git diff --staged`，或显式接收文件列表并已用暂存区文件填充
+
+拒绝执行仓库级脚本（如 `prettier --write .`、`eslint --fix .`、`format` 里的 `.` / `src/`）；即使脚本名含 `staged`，只要命令实际作用于整个仓库也不执行。**不改写脚本、不自行拼接仓库级命令**。已失败的 `prettier:auto` 不再作为候选。
+
+- 恰好一个候选 → 在仓库根执行 `cd <root> && npm run <script>`：
+  - 成功 → `git -C <root> add -A`，状态 `formatted`，工具记为 `package:<script>`，结束
+  - 失败 → `failed`，输出原始错误
+- 多个候选且无法确定 → `failed`，列出候选脚本让用户指定；**不猜测**
+- 没有候选 → `skipped`，输出第 4/5 步的原始错误 + “package.json 中没有作用于当前暂存区的格式化脚本”，结束
+
+主命令失败前可能已改动部分文件；这些改动保留在工作区，不自动回滚。调用方若继续，后续的 `git add -A` 会把它们纳入暂存区。
+
+### 7. 输出
 
 ```text
 ## format-keeper 结果
 - 状态: formatted / no_changes / skipped / failed
-- 模式: 写入 / 检查
-- 工具: <工具名 + 版本（如输出可得）>
-- 目标: N 个文件
-- 结果: 已格式化 N 个 / 无变化 N 个 / 跳过 N 个
-- 变更文件: <列表>
-- 跳过: <文件名 + 原因：无匹配工具 / 被忽略 / 锁文件 / 二进制>
+- 来源: prettier:auto / lc-build / package:<script> / none
+- 目标: N 个变更文件
+- 暂存: 已执行 git add -A / 未执行
+- 结果: 已格式化 / 无变化 / 跳过
+- 主命令错误: <prettier:auto 或 lc-build 的原始错误，如有>
+- 回退: <脚本名 + 结果，如有>
 - 失败: <原始错误 + 建议下一步>
 ```
 
@@ -140,29 +140,28 @@ git ls-files --others --exclude-standard -z
 
 | 状态 | 含义 | 调用方（如 `/git-flow-commit`） |
 | --- | --- | --- |
-| `formatted` | 有文件被格式化 | 继续；调用方重新 `git add .` |
-| `no_changes` | 工具运行但无文件变化 | 继续 |
-| `skipped` | 无可用工具 / 全部文件被跳过 | 继续（记录警告） |
-| `failed` | 工具执行报错 / 改动越界 | **停摆**，交给用户 |
+| `formatted` | 格式化命令成功，已重新 `git add -A` | 继续 |
+| `no_changes` | 相对 HEAD 没有变更文件 | 继续 |
+| `skipped` | 主命令失败且没有可用的暂存区回退脚本 | 继续（记录警告，提交不阻塞） |
+| `failed` | 冲突/敏感文件/暂存失败/回退脚本执行报错/候选不唯一 | **停摆**，交给用户 |
 
 ## 内嵌调用片段（供 `/git-flow-commit` 等引用）
 
 ```text
 格式化步骤（format-keeper）：
-1. 调用方先 git add .
-2. 确定目标文件：本次 git 变更（暂存 + 未暂存 + 未跟踪），排除忽略目录/锁文件/二进制
-3. 检测项目已有工具：package 脚本 → 配置 → 语言专用；只执行目标文件，禁止仓库级格式化
-4. 失败即停；无工具可用报告 skipped，不阻塞提交
-5. 格式化后调用方再次 git add .
-6. 不改语义、不创建配置、不安装依赖、不处理乱码
+1. 在仓库根执行 git add -A（等价 git add .，包含删除）
+2. 目标 = git diff HEAD --name-only --diff-filter=d 的全部变更文件，不区分暂存/未暂存
+3. 有 package.json#scripts["prettier:auto"] → npm run prettier:auto
+4. 没有 → git diff HEAD --name-only --diff-filter=d | xargs lc-build prettier -- --write
+5. 成功后再 git add -A；命令报错才分析 package.json 中作用于当前暂存区的格式化脚本
+6. 无可用命令 → skipped；回退脚本报错/冲突/敏感文件 → failed，调用方停摆
+7. 不改语义、不创建配置、不安装依赖、不处理乱码
 ```
 
 ## 边界
 
-- 不做命名规约、魔法数字、文件组织（`style-keeper`）
-- 不做乱码推断修复（`mojibake-fixer`）
-- 不创建/修改 ESLint、Prettier、Biome 等配置
-- 不安装/升级任何格式化工具
-- 不执行仓库级格式化，不格式化目标范围外文件
-- 不提交、不推送、不切分支（提交由 `/git-flow-commit` 或用户执行）
-- 不处理二进制文件、生成文件、锁文件
+- 不再做通用工具检测：不按 Prettier/ESLint/Biome 配置文件或语言专用工具自行选型，只走 `prettier:auto` → `lc-build` → package.json 暂存区脚本
+- 不执行自行拼接的仓库级格式化命令；`prettier:auto` 是项目预先定义的例外
+- 不创建/修改格式化配置，不安装/升级工具
+- 不提交、不推送、不切分支
+- 不处理乱码、二进制内容、生成文件；工具因这些文件报错时按回退流程处理

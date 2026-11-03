@@ -119,7 +119,7 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 
 | 模块 / 方向 | 说明 |
 | --- | --- |
-| **format-keeper** | 纯格式化 skill：默认只处理 git 变更文件，按项目已有工具执行，供 git-flow 提交流水线内嵌（仓库已创建，待部署） |
+| **format-keeper** | 纯格式化 skill：先统一暂存，再优先 `prettier:auto`、其次 `lc-build`，失败才回退 package.json 暂存区脚本，供 git-flow 提交流水线内嵌（仓库已创建，待部署） |
 | **git-flow 套件** | 环境分支 + 任务分支工作流：`/git-flow-start`、`/git-flow-sync`、`/git-flow-commit`、`/git-flow-merge`，见 [plans/git-flow.md](project-docs/plans/git-flow.md)（仓库已创建，待部署） |
 | **hooks 落地** | 部署后自动核对一致性、提交前提醒等自动化 hook |
 | **agents 子代理** | 规范审查专用代理，主对话只拿结论，省上下文 |
@@ -137,7 +137,7 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | 想创建新技能/命令 | `/skill-forge "创建一个 xxx"` |
 | 想按规范整理/修复代码注释 | `/comment-keeper`（可指定文件/目录/函数） |
 | 想统一命名/清理魔法数字 | `/style-keeper`（可指定文件/目录） |
-| 想格式化代码 | `/format-keeper`（默认 git 变更文件，支持 `--check`） |
+| 想格式化代码 | `/format-keeper`（统一暂存并格式化全部 git 变更；优先 `prettier:auto` / `lc-build`） |
 | 想按 ONES 单创建任务分支 | `/git-flow-start <工单内容/单号> [环境]` |
 | 想同步任务分支到环境分支 | `/git-flow-sync [环境]` |
 | 想提交并推送任务分支 | `/git-flow-commit`（默认 push，`--no-push` 只提交） |
