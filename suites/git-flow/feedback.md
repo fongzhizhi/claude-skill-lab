@@ -18,6 +18,11 @@
   - merge 的 fetch 提前到推送状态校验之前，预检报告注明快照 hash，不把“无冲突”包装成服务端保证
   - glab 描述优先用临时文件 + `--description-file`，实际参数以 `--help` 为准；不支持时退回 `--description "$(cat ...)"`
   - 暂缓：`/git-flow-promote`（等实际遇到环境提升需求）、`commit.checks` 实际执行、已合并分支清理（GitLab 自动删除已覆盖大半）
+- 复核反馈（2026-11-03，提交前自审）：
+  - P1 修复：`--repo` 模式下 format-keeper / mojibake-fixer / commit-draft 默认按会话当前目录执行，会作用到错误仓库；core 新增 §2.6 统一上下文规则，commit 的格式化、乱码检查、提交信息生成均改为显式继承 `<root>`
+  - P2 修复：`/git-flow-start --repos` 不再因兄弟仓库工作区不干净而停摆——`git branch` 只写引用，改为提醒后继续
+  - P2 采纳：遗漏检测区分「正在同名任务分支」与「仅存在同名分支（未检出）」
+  - P3 修正：改进建议文档 `git diff -U` 笔误改回 `git diff`
 - 待实测：
   - 工作区多仓库遗漏检测的提醒频率与噪音（当前任务无关改动是否过多）
   - `git branch --no-track` 在 Windows 中文/带空格路径下的表现

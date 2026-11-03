@@ -1,6 +1,6 @@
 ---
 name: git-flow-core
-description: git-flow 套件的共享规则：配置读取与校验、操作仓库解析、环境链、工作区前置检查、多仓库遗漏检测、ONES 工单解析、分支命名、远端 URL 推导与 Git 安全边界。执行 /git-flow-start、/git-flow-sync、/git-flow-commit、/git-flow-merge 前必须先读取本技能；/git-flow-init 复用本文件的配置校验规则。单个命令只描述自身流程，通用规则以本文件为准。
+description: git-flow 套件的共享规则：配置读取与校验、操作仓库解析、环境链、工作区前置检查、多仓库遗漏检测、内嵌技能上下文、ONES 工单解析、分支命名、远端 URL 推导与 Git 安全边界。执行 /git-flow-start、/git-flow-sync、/git-flow-commit、/git-flow-merge 前必须先读取本技能；/git-flow-init 复用本文件的配置校验规则。单个命令只描述自身流程，通用规则以本文件为准。
 version: 0.2.0
 ---
 # git-flow-core
@@ -170,7 +170,8 @@ git -C <root> ls-remote --exit-code --heads <remote> <branch>
 2. 对除操作仓库外的每个条目：
    - 解析 `path`；目录不存在或不是 Git 仓库 → 记为「仓库不可用」
    - `git -C <path> status --porcelain=v1` → 非空记为「未提交改动」
-   - `git -C <path> rev-parse --verify --quiet refs/heads/<branch>` → 成功记为「同名任务分支」
+   - `git -C <path> symbolic-ref -q --short HEAD` 等于当前任务分支 → 记为「正在同名任务分支」
+   - 否则 `git -C <path> rev-parse --verify --quiet refs/heads/<branch>` 成功 → 记为「存在同名任务分支（未检出）」
 3. 无任何命中 → 继续
 4. 有命中 → **停摆**，报告并给出选项：
 
@@ -179,7 +180,7 @@ git -C <root> ls-remote --exit-code --heads <remote> <branch>
 
   pro-pcb（D:/Code/GitEditor/editor-pro/pro-pcb）
     - 未提交改动 3 处：src/a.ts、src/b.ts、src/c.ts
-    - 存在同名任务分支 jiangshun/fix/4.1-PRO-159115
+    - 正在同名任务分支 jiangshun/fix/4.1-PRO-159115
   pro-api（D:/Code/GitEditor/editor-pro/pro-api）
     - 仓库不可用：配置 repos.pro-api.path = "pro-api"
 
@@ -190,8 +191,19 @@ git -C <root> ls-remote --exit-code --heads <remote> <branch>
 ```
 
 - 检测结果只是提醒：用户选择 `[1]` 后继续原流程
+- 「正在同名任务分支」表示该仓库当前检出在同一任务上，是比「仅存在同名分支」更强的信号，报告中必须区分
 - 每个仓库最多列出 5 个改动文件；仓库多时只列命中的
 - 不自动切换、不自动提交、不自动 stash 其他仓库
+
+### 2.6 内嵌技能与命令的上下文
+
+`/git-flow-commit` 会调用 `format-keeper`、`mojibake-fixer`、`commit-draft`。这些模块默认以“当前目录所在仓库”为工作对象；使用 `--repo <name>` 时会话当前目录可能不是操作仓库，必须显式继承 `<root>`：
+
+- 所有 git 命令改用 `git -C <root>`；模块内写死的 `git diff` / `git add -A` 等，均以 `<root>` 为仓库根执行
+- 需要 `npm run` / `lc-build` 的步骤（format-keeper）必须在 `<root>` 下运行，不能只在会话当前目录执行
+- 支持文件/目录参数的模块（mojibake-fixer）显式传入 `<root>` 下的变更文件绝对路径，避免扫描错误仓库
+- 不支持路径参数、按上下文收集变更的模块（commit-draft），调用时把其信息收集命令替换为 `git -C <root> ...`
+- 不依赖上一条命令的 `cd` 状态；每个内嵌步骤都显式带上 `<root>`
 
 ## 3. 环境解析（链式）
 

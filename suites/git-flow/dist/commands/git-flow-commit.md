@@ -79,13 +79,20 @@ category: git
 
 7. **格式化**：读取 `~/.claude/skills/format-keeper/SKILL.md`，按规则执行。该技能会先 `git add -A`，再按 `prettier:auto` → `lc-build` → `package.json` 暂存区脚本的顺序格式化；成功后再次 `git add -A`。
 
+   - **按 core §2.6 继承操作仓库上下文**：format-keeper 的仓库根固定为 `<root>`，其 `git` 命令使用 `-C <root>`，`npm run` / `lc-build` 必须在 `<root>` 下执行；不得使用会话当前目录
    - 技能不存在 → 停摆，提示 `claude-lab deploy format-keeper`
    - 第 5 步用户已明确确认敏感文件时，调用时说明该确认，避免 format-keeper 重复拦截
    - 状态 `formatted` / `no_changes` / `skipped` → 继续
    - 状态 `failed` → 停摆，输出原始错误，不提交
 
-8. **乱码检查**：读取 `~/.claude/commands/mojibake-fixer.md`，按其规则扫描并修复本次变更文件中的 U+FFFD。
+8. **乱码检查**：先取 `<root>` 的变更文件清单，再显式传给 mojibake-fixer，避免它按会话当前仓库执行默认的 `git diff`：
 
+   ```bash
+   git -C <root> diff HEAD --name-only --diff-filter=d
+   ```
+
+   - 清单为空 → 跳过本步
+   - 读取 `~/.claude/commands/mojibake-fixer.md`，把清单中的文件拼成绝对路径作为参数传入（可一次多个，或传其所在目录），并明确只扫描清单内文件
    - 命令不存在 → 停摆，提示 `claude-lab deploy mojibake-fixer`
    - 修复后仍有无法可靠推断的 U+FFFD → 停摆，列出文件与位置，交由用户处理
    - 不强行猜测、不跳过未修复项直接提交
@@ -100,6 +107,7 @@ category: git
 
     - 有 `--message` → 使用给定内容，校验非空
     - 否则读取 `~/.claude/commands/commit-draft.md`，按规则生成 Conventional Commits 信息；从当前分支名提取单号（`{ticket}`），结合会话中的 ONES 内容补充标题/链接
+    - **按 core §2.6 继承操作仓库上下文**：commit-draft 的 `git diff --cached` / `git diff` 等命令全部改为 `git -C <root> ...`，只使用操作仓库的变更
     - 生成失败或内容为空 → 停摆，请用户提供提交信息；**不提交空信息**
     - 提交信息写入系统临时目录的文件（不写入仓库），提交后删除
 

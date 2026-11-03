@@ -65,7 +65,7 @@ D:\Code\GitEditor\editor-pro\      ← 聚合目录（名字不固定）
 * 若干实战坑位处理正确：`--no-track` 防止任务分支误跟踪环境分支、首次 `push -u HEAD` 建立正确上游、`git merge-tree --write-tree` 只读冲突预检、glab 不可用时降级为手动入口
 * envs 显式映射天然支持上面 1.5 的分支名错位问题
 
-另外我核实过提交流水线与现有模块的衔接：mojibake-fixer 取 `git diff -U` `git diff --cached` 并集、commit-draft 以暂存区为主，在流水线先 `git add -A` 之后调用均能正常工作，无衔接问题。
+另外我核实过提交流水线与现有模块的衔接：mojibake-fixer 取 `git diff` `git diff --cached` 并集、commit-draft 以暂存区为主，在流水线先 `git add -A` 之后调用均能正常工作，无衔接问题。
 
 以下建议按优先级排列。
 

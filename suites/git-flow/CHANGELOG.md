@@ -23,6 +23,13 @@
 - 配置新增 `commit.checks` 预留字段（v0.2 不执行）
 - `/git-flow-commit` 文档补充 `--repo` 与多仓库检测步骤
 
+### 修复
+
+- core 新增 §2.6：`--repo` 模式下内嵌技能/命令继承操作仓库上下文，修复 format-keeper、mojibake-fixer、commit-draft 仍按会话当前目录执行的问题；commit 流程写明具体实现方式
+- `/git-flow-start --repos`：兄弟仓库工作区不干净由停摆改为提醒后继续（`git branch` 只写分支引用，不改工作区）
+- 多仓库遗漏检测区分「正在同名任务分支」与「存在同名任务分支（未检出）」
+- 修正改进建议文档中 `git diff -U` 笔误
+
 ### 文档
 
 - 配置参考新增：`/git-flow-init` 用法、工作区多仓库示例、`pro-api` 非同构分支示例、`commit.checks`、手动 MR Web 地址推导、版本 2 检查清单
