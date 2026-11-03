@@ -2,6 +2,13 @@
 
 <!-- 记录配置使用过程中发现的问题与改进建议。 -->
 
+## 2026-11-03（additionalDirectories 可移植）
+
+- 现象：为让 `/gitflow:init` 直接写入 `~/.claude/gitflow.json`，在 `_base.json` 加入 `permissions.additionalDirectories: ["C:\\Users\\win10\\.claude"]`；该路径硬编码用户名，且与当前机器实际用户 `jiangshun` 不符，换账号/换机器即失效
+- 采纳：profile 中改写 `"{HOME}/.claude"`，`claude-lab switch` 在写入前展开为 `os.homedir()`；同时兼容以 `~` 开头的路径
+- 决策：不依赖 Claude Code 对 `additionalDirectories` 的 `~` 展开（schema 未文档化该字段的 `~` 支持），由仓库侧展开成绝对路径，跨版本行为确定
+- 注意：放行整个 `~/.claude` 后，配合现有裸 `Write`/`Edit`，`settings.json`、`.credentials.json` 等也会进入自动写入范围；按“直接放开权限”的意愿保留，后续如需收窄可加 deny/ask 规则
+
 ## 2026-11-03
 
 - 全局 `~/.claude/CLAUDE.md` 此前游离于版本管理之外，误删/换机即丢失，且内容与仓库模块演进脱节 → 收编到 `settings/CLAUDE.md`，由 `deploy settings` 部署；`status` 报告漂移

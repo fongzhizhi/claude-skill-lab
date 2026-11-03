@@ -40,6 +40,9 @@
       "WebSearch",
       "mcp__cdp__*"
     ],
+    "additionalDirectories": [
+      "{HOME}/.claude"
+    ],
     "deny": [
       "Bash(rm -rf *)",
       "Bash(sudo *)",

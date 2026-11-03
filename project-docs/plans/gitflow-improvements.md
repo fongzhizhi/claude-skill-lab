@@ -49,7 +49,7 @@ D:\Code\GitEditor\editor-pro\      ← 聚合目录（名字不固定）
 | :--- | :--- |
 | 代码托管 | 自建内网 GitLab（不是 GitHub），走 MR 工作流 |
 | 项目管理 | ONES 工单（单号形如 PRO-159115、BUG-123），AI 会话里常直接粘贴工单标题 + 链接 |
-| 分支模型 | 环境分支模型：dev / 4.2 / 4.1 / 3.2 / 3.1 等环境分支长期存在且受保护；任务分支从所属环境拉出，命名 {user}/{feat\|fix}/{version}-{ticket}，如 jiangshun/fix/4.1-PRO-159115，完成后经 MR 合回所属环境 |
+| 分支模型 | 环境分支模型：dev / 4.1 / 3.2 / 3.1 等环境分支长期存在且受保护；任务分支从所属环境拉出，命名 {user}/{feat\|fix}/{version}-{ticket}，如 jiangshun/fix/4.1-PRO-159115，完成后经 MR 合回所属环境 |
 | AI 工具 | Claude Code + 本配置仓库（claude-skill-lab）锻造的技能/命令，gitflow 套件即由此交付 |
 
 ### 1.5 一个容易踩坑的细节：各仓库分支命名不同构
@@ -102,7 +102,7 @@ D:\Code\GitEditor\editor-pro\      ← 聚合目录（名字不固定）
 
 接入成本从半小时降到一分钟，多仓库环境收益放大。自动发现的结果仍经人工确认，符合套件的一贯哲学。
 
-> v0.4 补充：配置收敛为唯一的 `~/.claude/gitflow.json`。`/gitflow:init` 默认只扫描并新增/更新当前仓库条目；`--all` 才去父目录遍历全部兄弟仓库。不创建项目/工作区配置，没有多文件优先级，`claude-lab deploy` 也不管理配置。
+> v0.4 补充：配置收敛为唯一的 `~/.claude/gitflow.json`。`/gitflow:init` 默认只扫描并新增/更新当前仓库条目；`--all` 才去父目录遍历全部兄弟仓库。首次未传 `--envs` 时从远端分支自动探测环境链，已有配置则提示新增/消失环境。不创建项目/工作区配置，没有多文件优先级，`claude-lab deploy` 也不管理配置。
 
 ### P1：部署实测时建议校准的点
 

@@ -4,6 +4,8 @@
 
 ## 2026-11-03
 
+- `profiles/_base.json` 的 `permissions.additionalDirectories` 由硬编码 `C:\Users\win10\.claude` 改为 `{HOME}/.claude`：原路径与当前用户 `jiangshun` 不符，换用户名/换机器即失效
+- `claude-lab switch` 新增 `{HOME}` 与开头 `~` 的展开（仅作用于 `permissions.additionalDirectories`），写入 `~/.claude/settings.json` 前解析为当前用户主目录
 - `settings/CLAUDE.md` 收编 `~/.claude/CLAUDE.md`：全局个人指令首次入仓，成为唯一事实来源；按规划拆分，嘉立创EDA 环境知识留在全局版，仓库自身章节（三层规范体系、模块体系、Git 策略、settings.json 要点）去重后并入项目级 `CLAUDE.md`
 - CLI 新增 settings 部署通道：`claude-lab deploy settings` 静态复制 `settings/CLAUDE.md` → `~/.claude/CLAUDE.md`；`deploy --all` 一并执行；`status` 做字节一致性检查；`list` 展示配置模块；`remove settings` 明确拒绝
 - `settings.json` 永久排除于 deploy（归 `switch` 管，模板含占位符）；`profiles/*` 与 `vscode/` 暂不激活

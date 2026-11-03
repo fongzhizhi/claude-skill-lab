@@ -43,7 +43,6 @@ master（生产） ← develop（开发集成） ← feature / release / hotfix
 ```
 环境分支（长期、保护、对应具体版本环境，链式包含）
   ├── dev           集成分支（最高版本）
-  ├── 4.2
   ├── 4.1
   ├── 3.2
   └── 3.1
@@ -58,7 +57,7 @@ master（生产） ← develop（开发集成） ← feature / release / hotfix
 | 特征 | 说明 |
 |------|------|
 | **链式包含** | 高版本包含低版本，改动从低版本向高版本流动 |
-| **多版本并行** | 3.1、3.2、4.1、4.2、dev 同时存在 |
+| **多版本并行** | 3.1、3.2、4.1、dev 同时存在 |
 | **保护分支** | 所有环境分支受保护，禁止直接 push，必须走 MR |
 | **跳级合并** | 改动可一次合入多个高版本，不强制逐级 |
 | **任务分支从低版本拉** | 从目标环境分支创建，不跨版本复用 |
@@ -273,7 +272,7 @@ heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
 
 ```
 /git-merge              # 合当前环境，然后询问是否合高版本
-/git-merge +4.2 +dev    # 合当前环境 + 4.2 + dev，不问
+/git-merge +dev         # 合当前环境 + dev，不问
 /git-merge --no-ask     # 只合当前环境，不问高版本
 ```
 
@@ -287,8 +286,7 @@ heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
    - 有冲突 → 列冲突文件，停摆
    - 无冲突 → 继续
 5. 创建 MR → pro-ui/4.1（必选，执行）
-6. 询问："是否同步到更高版本？可选：4.2、dev"
-   - 用户选 4.2 → 冲突预检 → 创建 MR
+6. 询问："是否同步到更高版本？可选：dev"
    - 用户选 dev → 冲突预检 → 创建 MR
    - 用户选不需要 → 结束
 7. 输出汇总：所有 MR 链接
@@ -413,7 +411,7 @@ pro-pcb: jiangshun/fix/4.1-PRO-159115
 
 **不自动跨仓库合并**。因为：
 
-- 各仓库的合并目标可能不同（pro-ui 合 4.1+4.2+dev，pro-pcb 可能只合 4.1）
+- 各仓库的合并目标可能不同（pro-ui 合 4.1+dev，pro-pcb 可能只合 4.1）
 - 冲突预检需要各自在本地模拟
 - 合并的时机可能不同（pro-ui 先合，pro-pcb 后合）
 
@@ -427,8 +425,8 @@ pro-pcb: jiangshun/fix/4.1-PRO-159115
 ```json
 {
   "version": 2,
-  "chain": ["3.1", "3.2", "4.1", "4.2", "dev"],
-  "active": ["4.1", "4.2", "dev"],
+  "chain": ["3.1", "3.2", "4.1", "dev"],
+  "active": ["4.1", "dev"],
   "default_env": "dev",
   "remote": "origin",
   "repos": {
@@ -436,16 +434,18 @@ pro-pcb: jiangshun/fix/4.1-PRO-159115
       "path": "pro-ui",
       "envs": {
         "dev": "pro-ui/dev",
-        "4.2": "pro-ui/4.2",
-        "4.1": "pro-ui/4.1"
+        "4.1": "pro-ui/4.1",
+        "3.2": "pro-ui/3.2",
+        "3.1": "pro-ui/3.1"
       }
     },
     "pro-pcb": {
       "path": "pro-pcb",
       "envs": {
         "dev": "pro-pcb/dev",
-        "4.2": "pro-pcb/4.2",
-        "4.1": "pro-pcb/4.1"
+        "4.1": "pro-pcb/4.1",
+        "3.2": "pro-pcb/3.2",
+        "3.1": "pro-pcb/3.1"
       }
     }
   }
@@ -565,7 +565,7 @@ pro-pcb: jiangshun/fix/4.1-PRO-159115
 | 项 | 决策 |
 |----|------|
 | 指令命名 | 统一使用 `gitflow:` 命名空间：`/gitflow:init`、`/gitflow:start`、`/gitflow:sync`、`/gitflow:commit`、`/gitflow:merge`，避免与 Git 原生命令混淆 |
-| 环境同步 | **链式**：任务分支只合回所属环境；环境之间按 `chain` 顺序逐级 MR 提升（`4.1 → 4.2 → dev`） |
+| 环境同步 | **链式**：任务分支只合回所属环境；环境之间按 `chain` 顺序逐级 MR 提升（`4.1 → dev`） |
 | 未指定环境 | 默认 `default_env`，即链式顶端（通常 `dev`） |
 | 异常处理 | AI 不能快速解决的异常一律**停摆询问**，不猜测、不重试、不绕过 |
 | 配置位置 | 唯一全局配置 `~/.claude/gitflow.json`：`/gitflow:init` 默认更新当前仓库，`--all` 扫描父目录下全部仓库；不创建项目/工作区配置，无多文件优先级；`claude-lab deploy` 不管理配置 |

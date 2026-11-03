@@ -142,7 +142,7 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | 想按规范整理/修复代码注释 | `/comment-keeper`（可指定文件/目录/函数） |
 | 想统一命名/清理魔法数字 | `/style-keeper`（可指定文件/目录） |
 | 想格式化代码 | `/format-keeper`（统一暂存并格式化全部 git 变更；优先 `prettier:auto` / `lc-build`） |
-| 想生成 gitflow 配置 | `/gitflow:init --envs 4.1,4.2,dev`（默认只处理当前仓库；`--all` 扫描父目录下全部仓库；统一写入 `~/.claude/gitflow.json`） |
+| 想生成 gitflow 配置 | `/gitflow:init`（首次自动探测环境链；默认只处理当前仓库，`--all` 扫描父目录下全部仓库；统一写入 `~/.claude/gitflow.json`） |
 | 想按 ONES 单创建任务分支 | `/gitflow:start <工单内容/单号> [环境]`（`--repos` 为兄弟仓库建对齐分支） |
 | 想把环境最新改动合入任务分支 | `/gitflow:sync [环境]` |
 | 想提交并推送任务分支 | `/gitflow:commit`（默认 push，`--no-push` 只提交，`--repo` 操作兄弟仓库） |

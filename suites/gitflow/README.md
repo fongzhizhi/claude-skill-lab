@@ -2,7 +2,7 @@
 
 > AI 执行 Git 环境分支工作流的套件：生成配置、创建任务分支、同步、提交、创建 MR，正常流程自动跑，异常一律停摆交给人。
 
-环境分支（`dev` / `4.2` / `4.1` / ...）长期存在、只通过 MR 合入；每个任务从所属环境拉出 `{user}/{feat|fix}/{version}-{ticket}` 任务分支，开发完成后合回该环境。`gitflow` 把这条链路上的重复操作交给 AI，把需要业务判断的异常留给人。
+环境分支（`dev` / `4.1` / `3.2` / ...）长期存在、只通过 MR 合入；每个任务从所属环境拉出 `{user}/{feat|fix}/{version}-{ticket}` 任务分支，开发完成后合回该环境。`gitflow` 把这条链路上的重复操作交给 AI，把需要业务判断的异常留给人。
 
 面向**多仓库工作区**：一次会话同时修改多个仓库时，命令会检测兄弟仓库的遗漏改动；可用 `--repo` 切换操作仓库、`--repos` 创建对齐任务分支，不需要离开当前目录。
 
@@ -10,7 +10,7 @@
 
 | 类型 | 名称 | 说明 |
 | --- | --- | --- |
-| 命令 | `/gitflow:init` | 默认扫描当前仓库，`--all` 扫描父目录下全部兄弟仓库；创建或增量更新唯一的 `~/.claude/gitflow.json`，人工确认后落盘 |
+| 命令 | `/gitflow:init` | 默认扫描当前仓库，`--all` 扫描父目录下全部兄弟仓库；首次从远端分支自动探测环境链，已有配置时提示新增/消失环境；创建或增量更新唯一的 `~/.claude/gitflow.json`，人工确认后落盘 |
 | 命令 | `/gitflow:start` | 从 ONES 工单创建任务分支；未指定环境时用链式顶端（通常 `dev`），`--no-track` 避免误跟踪环境分支；`--repos` 为兄弟仓库创建同名对齐分支 |
 | 命令 | `/gitflow:sync` | 把所属环境分支的最新改动合入当前任务分支（fetch → 比较 → merge），冲突停摆 |
 | 命令 | `/gitflow:commit` | `git add -A` → format-keeper → mojibake-fixer → `git add -A` → commit-draft → commit → push；执行前检测其他仓库遗漏改动 |
@@ -44,14 +44,17 @@ claude-lab deploy gitflow
 gitflow 只有一份配置 `~/.claude/gitflow.json`，由 `/gitflow:init` 创建或增量更新：
 
 ```text
-/gitflow:init --envs 3.1,3.2,4.1,4.2,dev          # 只处理当前仓库
-/gitflow:init --all --envs 3.1,3.2,4.1,4.2,dev    # 扫描父目录下全部兄弟仓库
-/gitflow:init                                      # 已有配置时沿用 chain，只更新当前仓库
+/gitflow:init                     # 首次自动探测环境链；已有配置沿用并提示漂移
+/gitflow:init --all               # 扫描父目录下全部兄弟仓库，链级增删建议更完整
+/gitflow:init --envs 3.1,3.2,4.1,dev   # 显式指定环境链，跳过探测
 /gitflow:init --all --dry-run
 ```
 
 - 默认只扫描当前仓库；`--all` 才遍历当前仓库父目录下的直接子仓库
+- 首次未传 `--envs`：从当前仓库远端分支探测环境链；已有配置：沿用 `chain`，提示新增/疑似移除的环境
 - 文件不存在 → 创建；已存在 → 只更新本次涉及的仓库条目，保留其他仓库与手工字段
+- 单仓库 init 不主动删除链级环境；`--all` 才基于全部目标仓库的映射证据给出删除建议
+- 已有配置时，新增环境不会自动加入 `active`；需要启用时显式传 `--active`
 - 不创建项目/工作区 `.claude/gitflow.json`，不读取 `settings.json#gitflow`，没有多文件优先级
 - 落盘前展示草稿与变更摘要；远端分支无法自动匹配时停摆询问
 
@@ -62,15 +65,16 @@ gitflow 只有一份配置 `~/.claude/gitflow.json`，由 `/gitflow:init` 创建
 ```json
 {
   "version": 2,
-  "chain": ["4.1", "4.2", "dev"],
-  "active": ["4.1", "4.2", "dev"],
+  "chain": ["3.1", "3.2", "4.1", "dev"],
+  "active": ["4.1", "dev"],
   "default_env": "dev",
   "repos": {
     "pro-ui": {
       "envs": {
         "dev": "pro-ui/dev",
-        "4.2": "pro-ui/4.2",
-        "4.1": "pro-ui/4.1"
+        "4.1": "pro-ui/4.1",
+        "3.2": "pro-ui/3.2",
+        "3.1": "pro-ui/3.1"
       }
     }
   }
@@ -98,8 +102,9 @@ claude-lab deploy gitflow          # 或 claude-lab deploy suites/gitflow
 ## 使用
 
 ```text
-/gitflow:init --envs 3.1,3.2,4.1,4.2,dev
-/gitflow:init --all --envs 3.1,3.2,4.1,4.2,dev
+/gitflow:init
+/gitflow:init --all
+/gitflow:init --envs 3.1,3.2,4.1,dev
 
 /gitflow:start PRO-159115【冒烟测试】显示颜色设置背景色之后，重新打开PCB，背景色丢失
 heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
@@ -116,7 +121,7 @@ heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
 ### 链式模型
 
 ```text
-3.1 → 3.2 → 4.1 → 4.2 → dev
+3.1 → 3.2 → 4.1 → dev
 ```
 
 - 任务分支从**所属环境**拉出，只合回该环境
@@ -144,7 +149,7 @@ git add -A → format-keeper → mojibake-fixer → git add -A
 
 多仓库的改动靠工单号关联：各仓库分支名包含同一单号，MR 描述中引用同一工单。
 
-> `/gitflow:init` 生成的草稿在遇到仓库分支名与版本号不同构时不会猜测，会停摆要求人工映射（如 `4.1 → pro-api/0.3`）。
+> `/gitflow:init` 生成的草稿在遇到仓库分支名与版本号不同构时不会猜测，会停摆要求人工映射（如 `4.1 → pro-api/0.3`）。自动探测的环境变化（新增或消失）同样需要人工确认后才写入。
 
 ## 边界
 

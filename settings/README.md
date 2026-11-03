@@ -45,6 +45,8 @@ claude-lab switch deepseek --ephemeral   # 仅输出合并结果，不写盘
 
 `ANTHROPIC_AUTH_TOKEN` 保护：profile/base 中为占位符（如 `API_KEY`、`YOUR_API_KEY_HERE`）时，`switch` 会移除该键并继承本地已有的真实值。
 
+`permissions.additionalDirectories` 支持 `{HOME}` 占位符（以及以 `~` 开头的路径）：`claude-lab switch` 写入 `~/.claude/settings.json` 前会展开为当前用户主目录。profile 里写 `"{HOME}/.claude"` 即可放行 `~/.claude`，换用户名或换机器后重新 `switch` 会生成正确路径，不会因硬编码失效。
+
 ## 目录结构
 
 ```

@@ -1,6 +1,6 @@
 ---
 name: gitflow-core
-description: gitflow 套件的共享规则：唯一全局配置的读取与校验、操作仓库解析、环境链、工作区前置检查、多仓库遗漏检测、内嵌技能上下文、ONES 工单解析、分支命名、远端 URL 推导与 Git 安全边界。执行 /gitflow:start、/gitflow:sync、/gitflow:commit、/gitflow:merge 前必须先读取本技能；/gitflow:init 复用本文件的配置校验规则。单个命令只描述自身流程，通用规则以本文件为准。
+description: gitflow 套件的共享规则：唯一全局配置的读取与校验、操作仓库解析、环境链、工作区前置检查、多仓库遗漏检测、内嵌技能上下文、ONES 工单解析、分支命名、远端 URL 推导与 Git 安全边界。执行 /gitflow:start、/gitflow:sync、/gitflow:commit、/gitflow:merge 前必须先读取本技能；/gitflow:init 复用本文件的配置校验规则，并在首次初始化时自动探测环境链。单个命令只描述自身流程，通用规则以本文件为准。
 version: 0.4.0
 ---
 # gitflow-core
@@ -19,7 +19,7 @@ gitflow 只有一份配置：`~/.claude/gitflow.json`。
 
 ```text
 未找到 ~/.claude/gitflow.json。
-请在当前仓库运行 /gitflow:init 添加/更新当前仓库配置；
+请在当前仓库运行 /gitflow:init 添加/更新当前仓库配置（首次会自动探测环境链）；
 或运行 /gitflow:init --all 扫描当前工作区的全部仓库。
 ```
 
@@ -34,7 +34,7 @@ gitflow 只有一份配置：`~/.claude/gitflow.json`。
 | 字段 | 必填 | 说明 |
 | --- | --- | --- |
 | `version` | 是 | 配置版本，当前为 `2` |
-| `chain` | 是 | 环境链，从低到高排列，如 `["3.1","3.2","4.1","4.2","dev"]` |
+| `chain` | 是 | 环境链，从低到高排列，如 `["3.1","3.2","4.1","dev"]`；由 `/gitflow:init` 自动探测或显式指定 |
 | `active` | 否 | 当前在用的环境子集；缺省等于 `chain`。命令只接受 `active` 中的环境 |
 | `default_env` | 否 | 未指定环境时的默认值；缺省取 `active`（或 `chain`）的最后一个，即链式顶端 |
 | `remote` | 否 | 远端名，缺省 `origin` |
@@ -55,8 +55,8 @@ gitflow 只有一份配置：`~/.claude/gitflow.json`。
     "path": "pro-ui",
     "envs": {
       "dev": "pro-ui/dev",
-      "4.2": "pro-ui/4.2",
-      "4.1": "pro-ui/4.1"
+      "4.1": "pro-ui/4.1",
+      "3.2": "pro-ui/3.2"
     }
   }
 }

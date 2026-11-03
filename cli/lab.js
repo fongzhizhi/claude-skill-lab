@@ -840,6 +840,15 @@ function reorderKey(obj, key, index) {
   return result;
 }
 
+// 展开路径中的 {HOME} 与开头的 ~：profile 里写 "{HOME}/.claude"，
+// switch 写入 settings.json 前解析为当前用户主目录，避免硬编码用户名
+function expandHomePath(value) {
+  const expanded = value
+    .replace(/\{HOME\}/g, HOME)
+    .replace(/^~(?=$|[\\/])/, HOME);
+  return path.normalize(expanded);
+}
+
 // 校验 profile 并合并 _base.json + <profile>.json，返回合并后的配置对象
 function buildProfileConfig(profile) {
   const settingsDir = path.join(ROOT, "settings");
@@ -876,6 +885,16 @@ function buildProfileConfig(profile) {
   }
 
   const merged = deepMerge(base, override);
+
+  // permissions.additionalDirectories 支持 {HOME} / 开头 ~，
+  // 写入前展开为绝对路径，保证 profile 跨用户、跨机器可移植
+  const additionalDirs =
+    merged.permissions && merged.permissions.additionalDirectories;
+  if (Array.isArray(additionalDirs)) {
+    merged.permissions.additionalDirectories = additionalDirs.map((dir) =>
+      typeof dir === "string" ? expandHomePath(dir) : dir,
+    );
+  }
 
   // 读取现有配置，用于继承敏感值
   let existing = {};
