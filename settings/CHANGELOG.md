@@ -2,6 +2,12 @@
 
 <!-- 记录 settings/ 下的每次配置变更。 -->
 
+## 2026-11-03
+
+- `settings/CLAUDE.md` 收编 `~/.claude/CLAUDE.md`：全局个人指令首次入仓，成为唯一事实来源；按规划拆分，嘉立创EDA 环境知识留在全局版，仓库自身章节（三层规范体系、模块体系、Git 策略、settings.json 要点）去重后并入项目级 `CLAUDE.md`
+- CLI 新增 settings 部署通道：`claude-lab deploy settings` 静态复制 `settings/CLAUDE.md` → `~/.claude/CLAUDE.md`；`deploy --all` 一并执行；`status` 做字节一致性检查；`list` 展示配置模块；`remove settings` 明确拒绝
+- `settings.json` 永久排除于 deploy（归 `switch` 管，模板含占位符）；`profiles/*` 与 `vscode/` 暂不激活
+
 ## 2026-09-18
 
 - `profiles/_base.json` 会话保留周期 `cleanupPeriodDays` 60 → 30：`~/.claude/projects/` 会话记录累积约 2GB，缩短保留窗口控制磁盘增长（Claude Code 启动时按阈值自动清理旧 transcript，旧文件在下次启动一次性收口）

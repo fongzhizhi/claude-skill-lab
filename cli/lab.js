@@ -17,6 +17,12 @@ const HOME = os.homedir();
 // ~/.claude/commands/foo.md），与聚合套件共用同一认知模型，lab 无需按类型特殊处理
 const TYPES = ["skills", "agents", "commands", "rules", "hooks", "workflows", "docs"];
 
+// 配置模块（settings/）：不走单模块 dist/ 镜像，deploy 时按白名单静态复制。
+// 与顶层 manifest.json 的 settings.files 保持一致：v1 仅激活 CLAUDE.md；
+// settings.json 归 switch 管（含真实 token），deploy 永久跳过。
+const SETTINGS_MODULE = "settings";
+const SETTINGS_DEPLOY_FILES = ["CLAUDE.md"];
+
 // ~/.claude/ 根：单模块 dist/ 即其全量镜像（隐式），套件经 manifest.json 声明映射子集
 const CLAUDE_ROOT = path.join(HOME, ".claude");
 
@@ -130,7 +136,13 @@ function removeDistMirror(srcDir, destRoot) {
 }
 
 function findModules() {
-  const result = { types: {}, suites: {} };
+  const result = { types: {}, suites: {}, settings: null };
+
+  // 配置模块：settings/ 不在 TYPES 体系内，单独扫描供 deploy/status/list 使用
+  const settingsDir = path.join(ROOT, SETTINGS_MODULE);
+  if (fs.existsSync(settingsDir)) {
+    result.settings = settingsDir;
+  }
 
   // 扫描单模块类型目录
   for (const type of TYPES) {
@@ -200,6 +212,18 @@ function resolveModule(name) {
       }
       error(`模块 "${modName}" 在 "${type}" 中不存在`);
     }
+  }
+
+  // 配置模块特例：settings 是保留名，deploy 时按白名单静态复制
+  if (name === SETTINGS_MODULE) {
+    if (!modules.settings) {
+      error(`缺少 ${SETTINGS_MODULE}/ 目录`);
+    }
+    return {
+      type: "settings",
+      name: SETTINGS_MODULE,
+      path: modules.settings,
+    };
   }
 
   // 自动推断
@@ -384,7 +408,27 @@ function deploySuite(name, suitePath) {
   success(`套件 "${name}" 部署完成`);
 }
 
-// 一键部署所有模块（单模块 + 套件），逐个捕获失败，返回汇总
+// 配置模块部署：settings/ 下白名单文件静态复制到 ~/.claude/ 对应位置。
+// settings.json 归 switch（含真实 token），profiles/vscode 暂未激活，均不在此列。
+function deploySettings() {
+  const settingsDir = path.join(ROOT, SETTINGS_MODULE);
+  log(`部署: ${SETTINGS_MODULE} → ${CLAUDE_ROOT}`);
+
+  for (const rel of SETTINGS_DEPLOY_FILES) {
+    const srcFile = path.join(settingsDir, rel);
+    if (!fs.existsSync(srcFile)) {
+      error(`缺少文件: ${SETTINGS_MODULE}/${rel}`);
+    }
+    const destFile = path.join(CLAUDE_ROOT, rel);
+    fs.mkdirSync(path.dirname(destFile), { recursive: true });
+    fs.copyFileSync(srcFile, destFile);
+    log(`  ${rel} → ${destFile}`);
+  }
+
+  success(`部署完成: ${SETTINGS_MODULE}`);
+}
+
+// 一键部署所有模块（单模块 + 套件 + settings），逐个捕获失败，返回汇总
 function deployAllModules(force = false) {
   const modules = findModules();
   let ok = 0;
@@ -427,6 +471,16 @@ function deployAllModules(force = false) {
       ok++;
     } catch (e) {
       fail.push(`suites/${name}: ${e.message}`);
+    }
+  }
+
+  // 配置模块（settings）：静态部署全局 CLAUDE.md（settings.json 归 switch）
+  if (modules.settings) {
+    try {
+      deploySettings();
+      ok++;
+    } catch (e) {
+      fail.push(`${SETTINGS_MODULE}: ${e.message}`);
     }
   }
 
@@ -512,6 +566,8 @@ function cmdDeploy(args) {
 
   if (result.type === "suite") {
     deploySuite(result.name, result.path);
+  } else if (result.type === "settings") {
+    deploySettings();
   } else {
     deploySingleModule(result.type, result.name, result.path);
   }
@@ -564,7 +620,18 @@ function cmdList() {
     }
   }
 
-  if (typeNames.length === 0 && suiteNames.length === 0) {
+  // 配置模块
+  if (modules.settings) {
+    log("");
+    log("配置模块:");
+    log(`  ${SETTINGS_MODULE} (settings) — switch / deploy 专用，不提供 remove`, 1);
+  }
+
+  if (
+    typeNames.length === 0 &&
+    suiteNames.length === 0 &&
+    !modules.settings
+  ) {
     log("  (无)");
   }
 }
@@ -644,7 +711,31 @@ function cmdStatus() {
     }
   }
 
-  if (Object.keys(modules.types).length === 0 && suiteNames.length === 0) {
+  // 配置模块：CLAUDE.md 与仓库逐字节比较，防本地漂移；settings.json 归 switch，不参与
+  if (modules.settings) {
+    log("");
+    log("配置模块:");
+    for (const rel of SETTINGS_DEPLOY_FILES) {
+      const srcFile = path.join(modules.settings, rel);
+      const destFile = path.join(CLAUDE_ROOT, rel);
+
+      if (!fs.existsSync(srcFile)) {
+        log(`  ❌ settings/${rel} - 仓库文件缺失`);
+      } else if (!fs.existsSync(destFile)) {
+        log(`  ❌ settings/${rel} - 未部署`);
+      } else if (fs.readFileSync(srcFile).equals(fs.readFileSync(destFile))) {
+        log(`  ✅ settings/${rel} - 已部署（与仓库一致）`);
+      } else {
+        log(`  ⚠️  settings/${rel} - 已部署但与仓库不一致（本地已漂移）`);
+      }
+    }
+  }
+
+  if (
+    Object.keys(modules.types).length === 0 &&
+    suiteNames.length === 0 &&
+    !modules.settings
+  ) {
     log("  (无)");
   }
 }
@@ -659,6 +750,12 @@ function cmdRemove(args) {
 
   const name = args[0];
   const result = resolveModule(name);
+
+  if (result.type === "settings") {
+    error(
+      "settings 不提供卸载：~/.claude/CLAUDE.md 与 settings.json 是个人环境本体（与 gitinit 同理）"
+    );
+  }
 
   if (result.type === "suite") {
     // 套件卸载：根据 manifest 删除文件
@@ -934,9 +1031,10 @@ function showHelp() {
   claude-lab deploy <name> 部署模块 (自动推断)
   claude-lab deploy <type>/<name> 部署指定类型模块
   claude-lab deploy suites/<name> 部署聚合套件
+  claude-lab deploy settings  部署全局 CLAUDE.md（settings.json 由 switch 管理）
   claude-lab deploy --all  一键部署所有模块
   claude-lab deploy --all --switch <profile>  一键部署并切换配置
-  claude-lab remove <name> 卸载模块
+  claude-lab remove <name> 卸载模块（settings 不提供卸载）
   claude-lab switch        列出可用 profiles
   claude-lab switch <profile> 切换模型配置
   claude-lab switch <profile> --ephemeral  临时切换
@@ -945,6 +1043,7 @@ function showHelp() {
 示例:
   claude-lab deploy skill-forge
   claude-lab deploy commands/commit-draft
+  claude-lab deploy settings
   claude-lab deploy --all --switch deepseek
   claude-lab switch deepseek
   claude-lab status

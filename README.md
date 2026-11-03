@@ -57,11 +57,14 @@ claude-lab deploy --all
 # 4. 开发完成后，只重新部署迭代过的模块（没必要全量重来）
 claude-lab deploy commit-draft   # 之后对话中输入 /commit-draft 即可使用
 
-# 5. 切换模型配置
+# 5. 更新全局个人指令（修改 settings/CLAUDE.md 后）
+claude-lab deploy settings       # 静态复制到 ~/.claude/CLAUDE.md
+
+# 6. 切换模型配置
 claude-lab switch                # 列出可用 profiles
 claude-lab switch deepseek       # 切换到 deepseek
 
-# 6. 初始化 ~/.claude 本地 git 追踪（可选，追踪 deploy/switch 的覆盖变化）
+# 7. 初始化 ~/.claude 本地 git 追踪（可选，追踪 deploy/switch 的覆盖变化）
 claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 ```
 
@@ -76,13 +79,14 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | 命令 | 说明 |
 | --- | --- |
 | `claude-lab` | 显示帮助 |
-| `claude-lab list` | 列出所有可部署模块（含套件） |
-| `claude-lab status` | 显示本地部署状态 |
+| `claude-lab list` | 列出所有可部署模块（含套件与 settings） |
+| `claude-lab status` | 显示本地部署状态（含 `settings/CLAUDE.md` 一致性） |
 | `claude-lab deploy <name>` | 部署（类型自动推断） |
 | `claude-lab deploy <type>/<name>` | 同名冲突时显式限定 |
 | `claude-lab deploy suites/<name>` | 部署聚合套件 |
-| `claude-lab deploy --all` | 一键部署所有模块 |
-| `claude-lab remove <name>` | 卸载已部署模块 |
+| `claude-lab deploy settings` | 部署全局 `~/.claude/CLAUDE.md`（`settings.json` 仍由 switch 管） |
+| `claude-lab deploy --all` | 一键部署所有模块（含 settings） |
+| `claude-lab remove <name>` | 卸载已部署模块（settings 不提供卸载） |
 | `claude-lab switch` | 列出可用 profiles |
 | `claude-lab switch <profile>` | 切换模型配置 |
 | `claude-lab switch <profile> --ephemeral` | 仅当前会话生效 |
@@ -112,7 +116,7 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | **[ts-standards](rules/ts-standards/README.md)** | rules | 5 条 TS 必备规则（注释/风格/类型/错误处理/测试），路径作用域自动生效 |
 | **[ts-code-guide](docs/ts-code-guide/README.md)** | docs | TS 规范参考文档（注释/风格/类型/错误处理/测试 5 份指南）→ `~/.claude/docs/`，按需引用不占上下文 |
 | **[openspec](suites/openspec/README.md)** | suite | 6 个 `/opsx:*` 斜杠命令，规范驱动开发（需全局安装 `openspec` CLI） |
-| **[settings](settings/README.md)** | settings | 多模型切换（`_base.json` + profiles 合并），VSCode 配置部署 |
+| **[settings](settings/README.md)** | settings | 多模型切换（`_base.json` + profiles 合并）+ 全局 `CLAUDE.md` 部署（`deploy settings`） |
 | **[gitinit](gitinit/README.md)** | gitinit | `~/.claude` 本地 git 追踪：`claude-lab gitinit` 覆盖 `.gitignore`（同 switch 覆盖 settings.json），追踪 deploy/switch 的文件变化 |
 
 ### 🟡 待部署 / 规划中
@@ -149,6 +153,7 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | 想定位前端 bug | `/live-debugger "复现步骤 + 现状 + 预期"` |
 | 想快速验证功能/新改动 | `/quick-start "验证诉求与预期结果"` |
 | 想管理多模型配置 | `claude-lab switch <profile>` |
+| 想更新全局个人指令 | 修改 `settings/CLAUDE.md` 后 `claude-lab deploy settings` |
 | 想用规范驱动开发 | `claude-lab deploy openspec`，然后 `/opsx:propose` |
 | 想查看有哪些可用模块 | `claude-lab list` |
 

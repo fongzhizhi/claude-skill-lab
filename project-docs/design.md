@@ -8,6 +8,7 @@
 
 | 版本 | 日期       | 变更说明                                                                                                                                                                 |
 | ---- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| v2.2 | 2026-11-03 | settings 模块接入 deploy：`settings/CLAUDE.md` 收编全局个人指令，`claude-lab deploy settings` 静态部署到 `~/.claude/CLAUDE.md`；`settings.json` 仍由 switch 管理。       |
 | v2.1 | 2026-08-11 | 新增 `docs/` 模块类型（参考文档 → `~/.claude/docs/`）；项目说明文档迁移至 `project-docs/`；新增 `rules/ts-standards` TS 规则模块（含 5 条规则与 docs 软依赖检查）。      |
 | v2.0 | 2026-08-09 | 新增聚合套件（`suites/`）支持；统一所有模块成品存放于 `dist/` 目录；重构部署逻辑支持单模块与套件两种模式；更新 `manifest.json` 结构；引入套件内部 `manifest.json` 规范。 |
 | v1.0 | 初始       | 原始设计，仅支持单模块（skills/agents/commands/rules/hooks/workflows），成品文件位于模块根目录。                                                                         |
@@ -334,9 +335,20 @@ settings/
 ### 设计原则
 
 1. **模板与实际分离**：`settings.template.json` 入仓（含占位符），`settings.json` 不入仓（`.gitignore`），由手动拷贝模板并填充真实 Key。
-2. **`settings/` 即 `~/.claude/` 的镜像**：除 `vscode/` 子目录外，其余文件直接复制到 `~/.claude/` 对应位置。
+2. **按通道分离**：`CLAUDE.md` 由 `deploy settings` 纯静态复制到 `~/.claude/CLAUDE.md`；`settings.json` 由 `switch` 合并 profiles 后写入。`deploy` 永久跳过 `settings.json`，避免模板占位符覆盖真实 token。
 3. **多模型配置用"基座 + 差异"**：`_base.json` 存公共配置，各模型文件只放差异字段。
 4. **`CLAUDE.md` 优先级**：全局 `~/.claude/CLAUDE.md` 与项目级 `./CLAUDE.md` 合并，项目级配置优先。
+
+### 部署通道
+
+| 仓库文件 | 命令 | 目标 | 说明 |
+| --- | --- | --- | --- |
+| `settings/CLAUDE.md` | `claude-lab deploy settings` / `deploy --all` | `~/.claude/CLAUDE.md` | 纯静态复制；`status` 做字节一致性检查；不提供 `remove` |
+| `settings/profiles/*.json` | `claude-lab switch <profile>` | 合并结果写入 `~/.claude/settings.json` | profile 本身不落盘 |
+| `settings/settings.template.json` | 手动拷贝 | 仓库内 `settings/settings.json` | 不入仓，含真实 Key |
+| `settings/vscode/settings.json` | 暂未接入 | `{VSCodeSettings}` | 需另议解析与合并 |
+
+`deploy settings` 的部署白名单由 `cli/lab.js` 的 `SETTINGS_DEPLOY_FILES` 维护，与顶层 `manifest.json` 的 `settings.files` 保持一致：v1 仅激活 `CLAUDE.md`，`settings.json` 永久排除，`profiles/*` 与 `vscode/` 暂不激活。
 
 ### 多模型切换机制（Profile Merge）
 
@@ -388,6 +400,7 @@ CLI 只做四件事：**部署模块**、**管理配置**、**信息查询**、*
 | `lab status`                       | 显示本地已部署模块的状态                 |
 | `lab deploy [<type>/]<name>`       | 部署单模块或套件（必须带参）             |
 | `lab deploy suites/<name>`         | 显式部署聚合套件                         |
+| `lab deploy settings`              | 部署全局 `CLAUDE.md`（`settings.json` 归 switch） |
 | `lab switch`                       | 列出所有可用 profile                     |
 | `lab switch <profile>`             | 切换模型配置                             |
 | `lab switch <profile> --ephemeral` | 仅当前会话生效                           |
@@ -461,6 +474,17 @@ lab deploy suites/openspec    # 显式部署套件
 - 仓库：`suites/openspec/dist/commands/opsx/apply.md`
 - manifest 映射：`"source": "dist/commands/opsx/*.md"`, `"target": "{HOME}/.claude/commands/opsx/"`
 - 目标：`~/.claude/commands/opsx/apply.md`
+
+### settings 部署
+
+`lab deploy settings`（或 `lab deploy --all` 时一并执行）：
+
+1. 定位到 `settings/`
+2. 按 `SETTINGS_DEPLOY_FILES` 白名单逐个复制（当前仅 `CLAUDE.md`）
+3. `CLAUDE.md` → `~/.claude/CLAUDE.md`，直接覆盖
+4. 跳过 `settings.json`（由 `switch` 生成）、`profiles/*` 与 `vscode/*`（暂未激活）
+
+`lab status` 对白名单文件做逐字节比较，本地与仓库不一致时报告漂移；`lab remove settings` 会被拒绝，因为 `~/.claude/CLAUDE.md` 与 `settings.json` 属于个人环境本体。
 
 ### 覆盖策略
 
