@@ -1,7 +1,7 @@
 {
   "dependencies": [
     {
-      "name": "git（>= 2.38，/git-flow-merge 的 merge-tree 预检）",
+      "name": "git（>= 2.38，/gitflow:merge 的 merge-tree 预检）",
       "check": "git --version",
       "required": true
     },

@@ -1,11 +1,11 @@
 ---
-name: git-flow-start
+name: "gitflow:start"
 description: 从 ONES 工单创建任务分支：解析工单与环境，未指定环境时使用链式顶端（通常 dev），按 {user}/{feat|fix}/{version}-{ticket} 从远端环境分支创建且不跟踪环境分支。支持 --repo 指定配置中的兄弟仓库，支持 --repos 为多个仓库创建同名对齐任务分支（只创建、不切换）。操作仓库工作区不干净、工单/环境/类型无法确定或分支已存在时停摆询问；对齐仓库工作区不干净只提醒。
 category: git
 ---
-# /git-flow-start
+# /gitflow:start
 
-从 ONES 工单创建任务分支。**执行前必须先读取 `~/.claude/skills/git-flow-core/SKILL.md`**，配置读取、操作仓库、前置检查、环境解析、工单解析、分支命名与安全边界全部以 core 为准；本文件只描述 start 的独有流程。
+从 ONES 工单创建任务分支。**执行前必须先读取 `~/.claude/skills/gitflow-core/SKILL.md`**，配置读取、操作仓库、前置检查、环境解析、工单解析、分支命名与安全边界全部以 core 为准；本文件只描述 start 的独有流程。
 
 ## 参数
 
@@ -20,16 +20,16 @@ category: git
 | `--no-fetch` | 跳过 `git fetch`（仅在明确知道远端状态时使用；默认必须 fetch） |
 
 ```text
-/git-flow-start PRO-159115【冒烟测试】显示颜色设置背景色之后，重新打开PCB，背景色丢失
+/gitflow:start PRO-159115【冒烟测试】显示颜色设置背景色之后，重新打开PCB，背景色丢失
 heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
 4.1环境的缺陷
 
-/git-flow-start PRO-159115 4.1环境的缺陷 --repos pro-pcb,pro-api
+/gitflow:start PRO-159115 4.1环境的缺陷 --repos pro-pcb,pro-api
 ```
 
 ## 流程
 
-1. **读取共享规则**：读取 `~/.claude/skills/git-flow-core/SKILL.md`；若不存在，停摆并提示先部署 git-flow 套件。
+1. **读取共享规则**：读取 `~/.claude/skills/gitflow-core/SKILL.md`；若不存在，停摆并提示先部署 gitflow 套件。
 
 2. **解析操作仓库与配置**：按 core 第 1 节查找配置，按 §2.1 确定 `<root>`；`--repo` 指向的仓库必须在配置中且是 Git 仓库根目录。
 
@@ -127,11 +127,11 @@ heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
 
        预期失败（无上游）；意外存在上游 → 停摆报告。
 
-    > 兄弟仓库用 `git branch` 创建而非 `checkout`，避免未经确认改变其他仓库的工作区。需要在该仓库开发时，再执行 `git -C <sibling-root> checkout <branch>` 或直接用 `/git-flow-commit --repo <name>`。
+    > 兄弟仓库用 `git branch` 创建而非 `checkout`，避免未经确认改变其他仓库的工作区。需要在该仓库开发时，再执行 `git -C <sibling-root> checkout <branch>` 或直接用 `/gitflow:commit --repo <name>`。
 
     任一仓库失败 → 停摆，报告已创建与未创建的仓库；不自动删除已创建分支。
 
-14. **输出结果**：操作仓库、分支名、基于的环境分支、工单、目标环境及依据、对齐仓库表（仓库 / 分支 / 是否新建 / 是否已切换）、下一步建议（`/git-flow-commit`）。首次 push 由 `/git-flow-commit` 用 `git push -u <remote> HEAD` 完成（`<remote>` 缺省 `origin`）。
+14. **输出结果**：操作仓库、分支名、基于的环境分支、工单、目标环境及依据、对齐仓库表（仓库 / 分支 / 是否新建 / 是否已切换）、下一步建议（`/gitflow:commit`）。首次 push 由 `/gitflow:commit` 用 `git push -u <remote> HEAD` 完成（`<remote>` 缺省 `origin`）。
 
 ## 停摆条件
 
@@ -146,7 +146,7 @@ heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
 ## 输出示例
 
 ```text
-## git-flow start
+## gitflow:start
 - 操作仓库: pro-ui（D:/Code/GitEditor/editor-pro/pro-ui）
 - 当前分支: dev
 - 目标环境: 4.1（用户文本“4.1环境的缺陷”）
@@ -164,5 +164,5 @@ heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
 ### 结果
 - 状态: 成功
 - 分支: jiangshun/fix/4.1-PRO-159115（操作仓库，已切换）
-- 下一步: 开发完成后运行 /git-flow-commit；兄弟仓库用 --repo 处理
+- 下一步: 开发完成后运行 /gitflow:commit；兄弟仓库用 --repo 处理
 ```

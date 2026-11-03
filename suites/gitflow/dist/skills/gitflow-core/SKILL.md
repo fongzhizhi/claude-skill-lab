@@ -1,20 +1,20 @@
 ---
-name: git-flow-core
-description: git-flow 套件的共享规则：配置读取与校验、操作仓库解析、环境链、工作区前置检查、多仓库遗漏检测、内嵌技能上下文、ONES 工单解析、分支命名、远端 URL 推导与 Git 安全边界。执行 /git-flow-start、/git-flow-sync、/git-flow-commit、/git-flow-merge 前必须先读取本技能；/git-flow-init 复用本文件的配置校验规则。单个命令只描述自身流程，通用规则以本文件为准。
-version: 0.2.0
+name: gitflow-core
+description: gitflow 套件的共享规则：配置读取与校验、操作仓库解析、环境链、工作区前置检查、多仓库遗漏检测、内嵌技能上下文、ONES 工单解析、分支命名、远端 URL 推导与 Git 安全边界。执行 /gitflow:start、/gitflow:sync、/gitflow:commit、/gitflow:merge 前必须先读取本技能；/gitflow:init 复用本文件的配置校验规则。单个命令只描述自身流程，通用规则以本文件为准。
+version: 0.3.0
 ---
-# git-flow-core
+# gitflow-core
 
-git-flow 套件的**单一规则来源**。四个执行命令执行前先读取本文件并遵循；命令文档只写该命令独有的步骤。`/git-flow-init` 负责在配置缺失时生成配置，只复用 §1.2 / §1.3 的字段与校验规则。
+gitflow 套件的**单一规则来源**。四个执行命令执行前先读取本文件并遵循；命令文档只写该命令独有的步骤。`/gitflow:init` 负责在配置缺失时生成配置，只复用 §1.2 / §1.3 的字段与校验规则。
 
 ## 1. 配置
 
 ### 1.1 查找顺序
 
-1. 环境变量 `GIT_FLOW_CONFIG` 指向的绝对路径（临时覆盖，优先级最高）
-2. 当前仓库根目录的 `.claude/git-flow.json`；当前目录不在任何 Git 仓库内时，查找当前目录的 `.claude/git-flow.json`
-3. 从当前仓库根目录向上最多 3 层，查找 `<dir>/.claude/git-flow.json`
-4. 全局默认：`~/.claude/settings.json` 的 `gitFlow` 字段（由 `settings/profiles/_base.json` 维护，`claude-lab switch` 会保留）
+1. 环境变量 `GITFLOW_CONFIG` 指向的绝对路径（临时覆盖，优先级最高）
+2. 当前仓库根目录的 `.claude/gitflow.json`；当前目录不在任何 Git 仓库内时，查找当前目录的 `.claude/gitflow.json`
+3. 从当前仓库根目录向上最多 3 层，查找 `<dir>/.claude/gitflow.json`
+4. 全局默认：`~/.claude/settings.json` 的 `gitflow` 字段（由 `settings/profiles/_base.json` 维护，`claude-lab switch` 会保留）
 
 第 2、3 步只采用**与操作目标匹配**的配置：
 
@@ -26,20 +26,20 @@ git-flow 套件的**单一规则来源**。四个执行命令执行前先读取�
 
 **配置文件基准目录（下称 base）**：配置文件所在目录；若该目录名为 `.claude`，取它的上一级。`repos.*.path` 一律相对 base 解析：
 
-- `<repo>/.claude/git-flow.json` → base = `<repo>`，单仓库写 `"path": "."`
-- `<workspace>/.claude/git-flow.json` → base = `<workspace>`，多仓库写 `"path": "pro-ui"`、`"path": "pro-pcb"`
-- `GIT_FLOW_CONFIG` 指向其他位置时同理，base 为文件所在目录
+- `<repo>/.claude/gitflow.json` → base = `<repo>`，单仓库写 `"path": "."`
+- `<workspace>/.claude/gitflow.json` → base = `<workspace>`，多仓库写 `"path": "pro-ui"`、`"path": "pro-pcb"`
+- `GITFLOW_CONFIG` 指向其他位置时同理，base 为文件所在目录
 
 > 这样同一份工作区配置在任意仓库内执行命令都能解析出相同的仓库路径，不随当前目录变化。
 
-**合并规则**：全局 `gitFlow` 提供默认值，配置覆盖；对象深度合并，数组整体替换。`repos` 按仓库名合并。
+**合并规则**：全局 `gitflow` 提供默认值，配置覆盖；对象深度合并，数组整体替换。`repos` 按仓库名合并。
 
 找不到任何配置，或配置无法匹配操作目标 → **停摆**，输出：
 
 ```text
-未找到可用的 git-flow 配置。
-请运行 /git-flow-init 生成配置草稿，或在工作区/仓库根目录创建 .claude/git-flow.json
-（模板见 ~/.claude/docs/git-flow-config.md），或设置 GIT_FLOW_CONFIG 指向配置文件。
+未找到可用的 gitflow 配置。
+请运行 /gitflow:init 生成配置草稿，或在工作区/仓库根目录创建 .claude/gitflow.json
+（模板见 ~/.claude/docs/gitflow-config.md），或设置 GITFLOW_CONFIG 指向配置文件。
 ```
 
 ### 1.2 关键字段
@@ -58,7 +58,7 @@ git-flow 套件的**单一规则来源**。四个执行命令执行前先读取�
 | `protected` | 否 | 额外保护分支名（完整名或短名），与所有环境分支一起禁止直接提交 |
 | `repos` | 是 | 仓库映射，见下 |
 | `mr` | 否 | MR 默认值：`remove_source_branch`（缺省 `false`）、`reviewers`、`draft` |
-| `commit.checks` | 否 | 预留字段（字符串数组）：提交前附加检查命令；v0.2 不执行，未来按项目启用 |
+| `commit.checks` | 否 | 预留字段（字符串数组）：提交前附加检查命令；v0.3 不执行，未来按项目启用 |
 
 `repos` 每个条目：
 
@@ -75,7 +75,7 @@ git-flow 套件的**单一规则来源**。四个执行命令执行前先读取�
 }
 ```
 
-- `path`：仓库路径，相对 **base** 解析；缺省 `"."`。多仓库工作区配置写在 `<workspace>/.claude/git-flow.json`，各条目写兄弟目录名；单仓库配置写 `"."`。
+- `path`：仓库路径，相对 **base** 解析；缺省 `"."`。多仓库工作区配置写在 `<workspace>/.claude/gitflow.json`，各条目写兄弟目录名；单仓库配置写 `"."`。
 - `envs`：环境名 → **远端环境分支完整名**。同一环境名在不同仓库可以指向完全不同的分支名，不要求同构（如 `"4.1": "pro-api/0.3"`）。缺少当前所需环境 → 停摆并指出缺哪个键。
 - 多个条目同时匹配（仓库嵌套）时取 `path` 最长者；没有匹配 → 停摆并列出已配置路径。
 
@@ -83,7 +83,7 @@ git-flow 套件的**单一规则来源**。四个执行命令执行前先读取�
 
 配置读取后逐项校验，任一失败即停摆并指出文件、字段：
 
-- `version` 必须为 `2`；为 `1` 时提示路径解析语义已变更，请用 `/git-flow-init` 重新生成或参考文档迁移
+- `version` 必须为 `2`；为 `1` 时提示路径解析语义已变更，请用 `/gitflow:init` 重新生成或参考文档迁移
 - `chain` 非空、无重复
 - `active` 非空且必须是 `chain` 的子集
 - `repos` 非空，操作仓库条目必须存在
@@ -107,7 +107,7 @@ git-flow 套件的**单一规则来源**。四个执行命令执行前先读取�
 
 ### 2.2 工作区
 
-适用：`/git-flow-start`、`/git-flow-sync`、`/git-flow-merge`。`/git-flow-commit` **不执行**本节检查——它的职责就是提交当前工作区改动。
+适用：`/gitflow:start`、`/gitflow:sync`、`/gitflow:merge`。`/gitflow:commit` **不执行**本节检查——它的职责就是提交当前工作区改动。
 
 ```bash
 git -C <root> status --porcelain=v1
@@ -122,7 +122,7 @@ git -C <root> status --porcelain=v1
   ?? src/utils/color.ts
 
 请选择：
-  [1] 先提交（仅当当前分支是任务分支，调用 /git-flow-commit）
+  [1] 先提交（仅当当前分支是任务分支，调用 /gitflow:commit）
   [2] 暂存改动（git stash push -u）——需你明确确认后执行
   [3] 手动处理后再继续
 ```
@@ -164,7 +164,7 @@ git -C <root> ls-remote --exit-code --heads <remote> <branch>
 
 ### 2.5 多仓库遗漏检测
 
-适用：`/git-flow-commit`、`/git-flow-sync`、`/git-flow-merge`，在完成分支校验、确定当前任务分支后执行。目的是避免同一会话里改过的兄弟仓库被静默遗漏。**只读检测，不修改任何仓库。**
+适用：`/gitflow:commit`、`/gitflow:sync`、`/gitflow:merge`，在完成分支校验、确定当前任务分支后执行。目的是避免同一会话里改过的兄弟仓库被静默遗漏。**只读检测，不修改任何仓库。**
 
 1. 配置只有 1 个 `repos` 条目 → 跳过
 2. 对除操作仓库外的每个条目：
@@ -186,7 +186,7 @@ git -C <root> ls-remote --exit-code --heads <remote> <branch>
 
 本次只操作 pro-ui。请选择：
   [1] 继续只处理 pro-ui
-  [2] 处理 pro-pcb：/git-flow-commit --repo pro-pcb（sync / merge 同理）
+  [2] 处理 pro-pcb：/gitflow:commit --repo pro-pcb（sync / merge 同理）
   [3] 先手动处理这些仓库，再重新运行本命令
 ```
 
@@ -197,7 +197,7 @@ git -C <root> ls-remote --exit-code --heads <remote> <branch>
 
 ### 2.6 内嵌技能与命令的上下文
 
-`/git-flow-commit` 会调用 `format-keeper`、`mojibake-fixer`、`commit-draft`。这些模块默认以“当前目录所在仓库”为工作对象；使用 `--repo <name>` 时会话当前目录可能不是操作仓库，必须显式继承 `<root>`：
+`/gitflow:commit` 会调用 `format-keeper`、`mojibake-fixer`、`commit-draft`。这些模块默认以“当前目录所在仓库”为工作对象；使用 `--repo <name>` 时会话当前目录可能不是操作仓库，必须显式继承 `<root>`：
 
 - 所有 git 命令改用 `git -C <root>`；模块内写死的 `git diff` / `git add -A` 等，均以 `<root>` 为仓库根执行
 - 需要 `npm run` / `lc-build` 的步骤（format-keeper）必须在 `<root>` 下运行，不能只在会话当前目录执行
@@ -211,7 +211,7 @@ git -C <root> ls-remote --exit-code --heads <remote> <branch>
 
 解析顺序：
 
-1. 命令显式参数（如 `/git-flow-start ... 4.1`、`/git-flow-sync 4.1`）
+1. 命令显式参数（如 `/gitflow:start ... 4.1`、`/gitflow:sync 4.1`）
 2. 用户文本中明确提到的环境（如“4.1 环境的缺陷”）；同时提到多个且无法确定 → 停摆
 3. 配置 `default_env`
 4. `active`（或 `chain`）的最后一个，即**链式顶端**（通常是 `dev`）
@@ -301,18 +301,18 @@ git -C <root> rev-parse --abbrev-ref --symbolic-full-name '@{u}'
 - 配置 `protected` 中的名字
 - `main`、`master`（作为兜底）
 
-任务分支的判定：匹配 `branch_pattern` 且 `{type}` 为 `feat` / `fix`、`{ticket}` 形如 `[A-Z]+-\d+`。不匹配 → 视为非任务分支，`/git-flow-commit` 停摆。
+任务分支的判定：匹配 `branch_pattern` 且 `{type}` 为 `feat` / `fix`、`{ticket}` 形如 `[A-Z]+-\d+`。不匹配 → 视为非任务分支，`/gitflow:commit` 停摆。
 
 ### 5.2 允许自动执行
 
 - `git fetch --prune`
 - `git status` / `log` / `diff` / `rev-list` / `merge-base` / `ls-remote` / `rev-parse`
 - `git checkout --no-track -b`（仅操作仓库）
-- `git branch --no-track <branch> <remote>/<env-branch>`（仅 `/git-flow-start --repos` 为兄弟仓库创建对齐分支；**不切换**兄弟仓库工作区）
-- `git merge --no-edit <env-branch>`（仅 `/git-flow-sync`）
+- `git branch --no-track <branch> <remote>/<env-branch>`（仅 `/gitflow:start --repos` 为兄弟仓库创建对齐分支；**不切换**兄弟仓库工作区）
+- `git merge --no-edit <env-branch>`（仅 `/gitflow:sync`）
 - `git merge-tree --write-tree --name-only`（只读预检，不碰工作区）
-- `git add -A`（仅 `/git-flow-commit`，按命令流程）
-- `git commit`（仅 `/git-flow-commit`）
+- `git add -A`（仅 `/gitflow:commit`，按命令流程）
+- `git commit`（仅 `/gitflow:commit`）
 - `git push` / `git push -u`（非强制，仅命令流程明确要求时）
 
 ### 5.3 未经用户明确要求绝不执行
@@ -340,7 +340,7 @@ git -C <root> rev-parse --abbrev-ref --symbolic-full-name '@{u}'
 每次执行输出统一结构：
 
 ```text
-## git-flow <command>
+## gitflow <command>
 - 操作仓库: <repo-name>（<root>）
 - 当前分支: <branch>
 - 目标环境: <env>（选择依据）
@@ -358,7 +358,7 @@ git -C <root> rev-parse --abbrev-ref --symbolic-full-name '@{u}'
 - 下一步: <建议命令或操作>
 ```
 
-`/git-flow-start --repos` 额外输出对齐仓库表（仓库、分支、是否新建）。停摆时必须说明“发生了什么、哪些动作没有执行、可选方案”，不把异常包装成成功。
+`/gitflow:start --repos` 额外输出对齐仓库表（仓库、分支、是否新建）。停摆时必须说明“发生了什么、哪些动作没有执行、可选方案”，不把异常包装成成功。
 
 ## 7. 远端 URL 与手动 MR 入口
 

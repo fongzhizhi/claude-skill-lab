@@ -1,11 +1,11 @@
 ---
-name: git-flow-commit
+name: "gitflow:commit"
 description: 在任务分支上完成提交流水线：git add -A → format-keeper 格式化 → mojibake-fixer 检查乱码 → git add -A → commit-draft 生成提交信息 → git commit → git push。默认推送；支持 --repo 操作配置中的兄弟仓库，并在执行前检测其他仓库的遗漏改动。格式化或乱码检查失败、分支不是任务分支、疑似敏感文件时停摆询问。
 category: git
 ---
-# /git-flow-commit
+# /gitflow:commit
 
-任务分支的提交流水线。**执行前必须先读取 `~/.claude/skills/git-flow-core/SKILL.md`**，配置、操作仓库、分支保护、用户/工单解析与安全边界以 core 为准。
+任务分支的提交流水线。**执行前必须先读取 `~/.claude/skills/gitflow-core/SKILL.md`**，配置、操作仓库、分支保护、用户/工单解析与安全边界以 core 为准。
 
 ## 参数
 
@@ -16,10 +16,10 @@ category: git
 | `--message "<msg>"` | 跳过 commit-draft，直接使用给定提交信息（仍需通过 Git 校验） |
 
 ```text
-/git-flow-commit
-/git-flow-commit --no-push
-/git-flow-commit --repo pro-pcb
-/git-flow-commit --message "fix: 修复背景色丢失 (PRO-159115)"
+/gitflow:commit
+/gitflow:commit --no-push
+/gitflow:commit --repo pro-pcb
+/gitflow:commit --message "fix: 修复背景色丢失 (PRO-159115)"
 ```
 
 ## 流水线
@@ -34,14 +34,14 @@ category: git
 
 ## 流程
 
-1. **读取共享规则与配置**：读取 `~/.claude/skills/git-flow-core/SKILL.md`，按 core 第 1 节定位操作目标与配置。
+1. **读取共享规则与配置**：读取 `~/.claude/skills/gitflow-core/SKILL.md`，按 core 第 1 节定位操作目标与配置。
 
 2. **解析操作仓库**：按 core §2.1 确定 `<root>`；`--repo` 指向的仓库必须在配置中且是 Git 仓库根目录。输出写明“操作仓库”。
 
 3. **分支校验**（提交前唯一的工作区前置检查）：
    - 按 core §2.3 检查进行中的 merge/rebase/cherry-pick/revert 与 detached HEAD，命中 → 停摆
    - 当前分支等于操作仓库任一环境分支、`protected`、`main`/`master` → 停摆，**禁止直接提交到保护分支**
-   - 当前分支不匹配 `branch_pattern`（`{type}` 不是 `feat`/`fix` 或 `{ticket}` 不合法）→ 停摆，提示先用 `/git-flow-start` 创建任务分支
+   - 当前分支不匹配 `branch_pattern`（`{type}` 不是 `feat`/`fix` 或 `{ticket}` 不合法）→ 停摆，提示先用 `/gitflow:start` 创建任务分支
 
    ```bash
    git -C <root> symbolic-ref -q --short HEAD
@@ -111,7 +111,7 @@ category: git
     - 生成失败或内容为空 → 停摆，请用户提供提交信息；**不提交空信息**
     - 提交信息写入系统临时目录的文件（不写入仓库），提交后删除
 
-    > 配置 `commit.checks` 是预留字段，v0.2 不执行；不要把它当作已生效的检查。
+    > 配置 `commit.checks` 是预留字段，v0.3 不执行；不要把它当作已生效的检查。
 
 11. **提交**：
 
@@ -133,7 +133,7 @@ category: git
 
     推送被拒绝（非快进、保护分支、权限、认证）→ 停摆，输出原因与可选方案；**绝不 force、绝不自动 pull/rebase**。
 
-13. **输出结果**：操作仓库、格式化状态、乱码修复情况、提交 hash 与 subject、推送结果（远端分支或“未推送”）、下一步建议（`/git-flow-sync` 或 `/git-flow-merge`）。
+13. **输出结果**：操作仓库、格式化状态、乱码修复情况、提交 hash 与 subject、推送结果（远端分支或“未推送”）、下一步建议（`/gitflow:sync` 或 `/gitflow:merge`）。
 
 ## 停摆条件
 
@@ -149,7 +149,7 @@ category: git
 ## 输出示例
 
 ```text
-## git-flow commit
+## gitflow:commit
 - 操作仓库: pro-ui（D:/work/pro-ui）
 - 当前分支: jiangshun/fix/4.1-PRO-159115
 - 目标环境: 4.1（分支名）
@@ -167,5 +167,5 @@ category: git
 ### 结果
 - 状态: 成功
 - 推送: origin/jiangshun/fix/4.1-PRO-159115
-- 下一步: 开发完成并自测后运行 /git-flow-merge；pro-pcb 的改动可用 /git-flow-commit --repo pro-pcb 处理
+- 下一步: 开发完成并自测后运行 /gitflow:merge；pro-pcb 的改动可用 /gitflow:commit --repo pro-pcb 处理
 ```

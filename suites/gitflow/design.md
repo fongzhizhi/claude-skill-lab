@@ -1,6 +1,6 @@
 # design.md
 
-## git-flow 设计
+## gitflow 设计
 
 ### 背景
 
@@ -14,15 +14,19 @@
 
 #### 1. 聚合套件 + 共享核心技能
 
-五个命令共享配置读取、操作仓库解析、环境链、前置检查、多仓库检测、ONES 解析与安全边界。把这些放进 `git-flow-core` 技能，命令只描述自身差异：
+五个命令共享配置读取、操作仓库解析、环境链、前置检查、多仓库检测、ONES 解析与安全边界。把这些放进 `gitflow-core` 技能，命令只描述自身差异：
 
 - 规则单一来源，改一处所有命令同时生效
 - 命令文档更短，避免复制粘贴导致规则漂移
-- `git-flow-core` 也可被后续命令（如 `/git-flow-promote`）复用
+- `gitflow-core` 也可被后续命令（如 `/gitflow:promote`）复用
 
-#### 2. 命令统一 `git-flow-*` 前缀
+#### 2. 命令使用 `gitflow:` 命名空间
 
-`git-start` / `git-commit` 这类名字与 Git 原生命令高度相似，容易误解为 Git 子命令。统一用 `git-flow-*`，斜杠命令与 Git 命令在语义上清晰隔离。
+`git-start` / `git-commit` 这类名字与 Git 原生命令高度相似，容易误解为 Git 子命令；单层 `git-flow-*` 虽能隔离语义，但前缀冗长、命令文件平铺。v0.3 起统一放入 `commands/gitflow/` 目录，调用为 `/gitflow:init`、`/gitflow:start` 等：
+
+- 斜杠命令与 Git 命令在语义上清晰隔离
+- 命名空间与套件同名，`~/.claude/commands/gitflow/` 下即可看到全部子命令
+- 结构参考 OpenSpec 套件的 `/opsx:*`
 
 #### 3. 链式环境模型
 
@@ -33,14 +37,14 @@
 - 任务分支只合回**所属环境**，不直接从任务分支向多个环境开 MR
 - 环境之间按链式顺序逐级提升，避免同一改动在多条路径重复合并、产生不同步
 - 未指定环境时默认链式顶端（通常 `dev`）：用户确认“没有指定就用最新”，减少每次输入
-- v0.2 先实现任务 → 所属环境的 MR；环境提升留给后续 `/git-flow-promote`
+- v0.3 先实现任务 → 所属环境的 MR；环境提升留给后续 `/gitflow:promote`
 
-#### 4. 配置放仓库/工作区 `.claude/git-flow.json`
+#### 4. 配置放仓库/工作区 `.claude/gitflow.json`
 
 `settings/profiles/_base.json` 是全局个人配置，适合放“默认环境、用户、分支模式、MR 默认值”等固定偏好；但**仓库-环境分支映射是项目事实**，应随项目走：
 
 - 配置提交到 Git，团队共享同一套映射
-- 全局 `gitFlow` 字段提供默认值，配置覆盖
+- 全局 `gitflow` 字段提供默认值，配置覆盖
 - 不直接写 `~/.claude/settings.json`：`claude-lab switch` 会用 profile 重写，只有 `_base.json` 里的键能保留
 
 合并规则：全局 < 配置，对象深度合并，数组替换。
@@ -53,24 +57,24 @@
 - 格式化后再 add，保证格式化结果进入提交
 - commit-draft 生成 Conventional Commits 信息，单号从分支名与会话 ONES 内容提取
 - 默认 push；`--no-push` 可只提交
-- v0.2 不跑 TS 类型检查与单元测试；配置 `commit.checks` 预留数组位，未来按项目启用时只改配置
+- v0.3 不跑 TS 类型检查与单元测试；配置 `commit.checks` 预留数组位，未来按项目启用时只改配置
 
 #### 6. 格式化独立成 `format-keeper`
 
 格式化是可独立运行、也可内嵌的步骤，做成技能而非命令：
 
 - 需要按项目检测工具、按扩展名分组、区分 `skipped` / `failed`
-- `git-flow-commit` 只引用其规则与状态，不复制实现
+- `/gitflow:commit` 只引用其规则与状态，不复制实现
 - 同时支持 `/format-keeper` 手动执行
 
 #### 7. 上游跟踪修复
 
-从远端环境分支创建任务分支时使用 `git checkout --no-track -b`。若不加 `--no-track`，任务分支会跟踪环境分支，`git push` 可能被 `push.default=simple` 拒绝，或误推向环境分支。首次 push 由 `/git-flow-commit` 使用 `git push -u origin HEAD` 建立正确上游。
+从远端环境分支创建任务分支时使用 `git checkout --no-track -b`。若不加 `--no-track`，任务分支会跟踪环境分支，`git push` 可能被 `push.default=simple` 拒绝，或误推向环境分支。首次 push 由 `/gitflow:commit` 使用 `git push -u origin HEAD` 建立正确上游。
 
 #### 8. 冲突只预检，不解决
 
-- `/git-flow-sync`：真实 merge；冲突停摆，保留冲突状态，由用户决定解决或 `merge --abort`
-- `/git-flow-merge`：`git merge-tree --write-tree --name-only` 只读模拟，不碰工作区；有冲突只报告文件，不创建 MR
+- `/gitflow:sync`：真实 merge；冲突停摆，保留冲突状态，由用户决定解决或 `merge --abort`
+- `/gitflow:merge`：`git merge-tree --write-tree --name-only` 只读模拟，不碰工作区；有冲突只报告文件，不创建 MR
 - 不提供 ours/theirs 自动选择：跨版本冲突方向往往需要业务判断
 
 #### 9. 停摆优先
@@ -90,11 +94,11 @@
 
 1. **遗漏检测（默认）**：commit / sync / merge 开头只读扫描其他配置仓库的未提交改动与同名任务分支，命中即停摆提醒。改动最小、防事故价值最大；纯提醒，用户确认后可继续。报告区分「正在同名任务分支」（更强信号）与「仅存在同名分支」。
 2. **`--repo <name>`**：命令显式操作配置中的某个兄弟仓库，内部用 `git -C`，会话不切目录。不自动切换、不自动选择。
-3. **`--repos <a,b,c|all>`**：`/git-flow-start` 为兄弟仓库创建同名对齐任务分支（同环境、同单号），用 `git branch --no-track` **只创建、不切换**，避免改变其他仓库工作区与上下文；工作区不干净只提醒，不阻断建分支。
+3. **`--repos <a,b,c|all>`**：`/gitflow:start` 为兄弟仓库创建同名对齐任务分支（同环境、同单号），用 `git branch --no-track` **只创建、不切换**，避免改变其他仓库工作区与上下文；工作区不干净只提醒，不阻断建分支。
 
 多仓库改动靠工单号关联，不引入额外元数据。
 
-#### 11. `/git-flow-init` 配置自动生成
+#### 11. `/gitflow:init` 配置自动生成
 
 5 个常用仓库 × 3 个环境 = 15 条映射，手写易错。初始化命令：
 
@@ -110,7 +114,7 @@ v0.1 的 `path` 相对当前仓库根目录解析，多仓库工作区配置在�
 
 - base = 配置文件所在目录；目录名为 `.claude` 时取上一级
 - 工作区配置写 `"path": "pro-ui"`，单仓库配置写 `"path": "."`
-- 配置版本升到 `2`；旧版本明确停摆并提示用 `/git-flow-init` 重新生成
+- 配置版本升到 `2`；旧版本明确停摆并提示用 `/gitflow:init` 重新生成
 
 #### 13. merge 先 fetch 再比较，预检注明快照
 
@@ -120,7 +124,7 @@ v0.1 的 `path` 相对当前仓库根目录解析，多仓库工作区配置在�
 #### 14. 文档收敛与 glab 适配
 
 - 各命令的“停摆条件”只列命令特有项，通用项引用 core §2/§5，遵守“core 单一规则来源”
-- `/git-flow-sync` 的方向统一表述为“环境分支 → 任务分支”，避免读反
+- `/gitflow:sync` 的方向统一表述为“环境分支 → 任务分支”，避免读反
 - glab：内网 GitLab 需 `--hostname` / `GITLAB_HOST`；描述优先用临时文件 + `--description-file`（以 `--help` 为准），规避 Windows 多行引号转义；手动入口的 Web URL 由 `git remote get-url` 按规则推导并对分支名 URL 编码
 
 #### 15. 内嵌技能继承操作仓库上下文
@@ -132,17 +136,28 @@ v0.1 的 `path` 相对当前仓库根目录解析，多仓库工作区配置在�
 - commit-draft 的信息收集命令替换为 `git -C <root> ...`
 - 不依赖上一条命令的 `cd` 状态
 
+#### 16. 全面改名 `gitflow`（v0.3.0 破坏性变更）
+
+套件、技能、命令命名空间、配置文件名与全局键统一为 `gitflow`：
+
+- 套件目录 `suites/gitflow/`，共享技能 `gitflow-core`
+- 命令落入 `commands/gitflow/`，调用 `/gitflow:init` 等；manifest 映射 `commands/gitflow/*.md` → `~/.claude/commands/gitflow/`
+- 配置 `.claude/gitflow.json`、全局键 `settings.json#gitflow`、环境变量 `GITFLOW_CONFIG`
+- 旧名 `/git-flow-*`、`.claude/git-flow.json`、`gitFlow` 不再识别；v0.3 尚未部署，无迁移成本
+
+改名动机：套件名、命令前缀、技能名、配置名此前各用一套写法（`git-flow` / `git-flow-*` / `gitFlow`），使用者需要在多种形态间换算。统一为单个词 `gitflow` 后，目录、命令命名空间、技能名与配置键一一对应，也避免了命令文件平铺在 `commands/` 根目录。
+
 ### 与现有模块的关系
 
 - `format-keeper`：提交流水线的格式化步骤
 - `mojibake-fixer`：提交流水线的乱码检查步骤
 - `commit-draft`：提交信息生成
 - `ones-parser`：工单解析（优先使用）
-- `git-flow-core`：本套件共享规则
+- `gitflow-core`：本套件共享规则
 
-### 已知限制（v0.2.0）
+### 已知限制（v0.3.0）
 
-- `/git-flow-merge` 只创建任务 → 所属环境的 MR，环境链提升（`/git-flow-promote`）尚未提供
+- `/gitflow:merge` 只创建任务 → 所属环境的 MR，环境链提升（`/gitflow:promote`）尚未提供
 - `commit.checks` 仅预留，不执行
 - 自动创建 MR 依赖 `glab`；不可用时只能给出手动入口
 - 跨仓库写操作必须显式 `--repo`/`--repos`，不自动切换其他仓库工作区、不隐式写入

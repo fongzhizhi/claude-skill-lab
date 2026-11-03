@@ -1,11 +1,11 @@
 ---
-name: git-flow-sync
+name: "gitflow:sync"
 description: 将当前任务分支所属环境分支的最新改动合入任务分支：fetch → 比较落后提交 → git merge 环境分支 → 推送；冲突停摆。支持 --repo 操作配置中的兄弟仓库，并在执行前检测其他仓库的遗漏改动。未指定环境时从分支名解析；跨环境同步需确认。
 category: git
 ---
-# /git-flow-sync
+# /gitflow:sync
 
-将**所属环境分支的最新改动合入当前任务分支**（环境分支 → 任务分支，merge，不 rebase）。**执行前必须先读取 `~/.claude/skills/git-flow-core/SKILL.md`**。
+将**所属环境分支的最新改动合入当前任务分支**（环境分支 → 任务分支，merge，不 rebase）。**执行前必须先读取 `~/.claude/skills/gitflow-core/SKILL.md`**。
 
 ## 参数
 
@@ -16,10 +16,10 @@ category: git
 | `--no-push` | 合并成功后不推送 |
 
 ```text
-/git-flow-sync
-/git-flow-sync 4.1
-/git-flow-sync --repo pro-pcb
-/git-flow-sync --no-push
+/gitflow:sync
+/gitflow:sync 4.1
+/gitflow:sync --repo pro-pcb
+/gitflow:sync --no-push
 ```
 
 ## 流程
@@ -76,7 +76,7 @@ category: git
      ```
 
      列出冲突文件，说明“工作区保持冲突状态”，让用户选择：
-     - 手动解决后重新运行 `/git-flow-sync`
+     - 手动解决后重新运行 `/gitflow:sync`
      - 明确确认后执行 `git merge --abort` 放弃本次合并
      - 其他处理方式
 
@@ -111,7 +111,7 @@ category: git
 ## 输出示例
 
 ```text
-## git-flow sync
+## gitflow:sync
 - 操作仓库: pro-ui（D:/work/pro-ui）
 - 当前分支: jiangshun/fix/4.1-PRO-159115
 - 目标环境: 4.1（分支名）
@@ -129,5 +129,5 @@ category: git
 
 ### 结果
 - 状态: 成功
-- 下一步: 继续开发后运行 /git-flow-commit
+- 下一步: 继续开发后运行 /gitflow:commit
 ```

@@ -1,8 +1,8 @@
-# git-flow 套件改进建议
+# gitflow 套件改进建议
 
-> 来自 git-flow 套件使用方的反馈。为便于没有相关背景的同事理解，第一部分先完整介绍我的工作环境与开发模式，改进建议均以此为出发点。
+> 来自 gitflow 套件使用方的反馈。为便于没有相关背景的同事理解，第一部分先完整介绍我的工作环境与开发模式，改进建议均以此为出发点。
 >
-> 配套阅读：git-flow.md（套件设计构思）、suites/git-flow/README.md（v0.1 现状）
+> 配套阅读：gitflow.md（套件设计构思）、suites/gitflow/README.md（v0.1 现状）
 
 ## 一、我的工作背景与环境
 
@@ -50,18 +50,18 @@ D:\Code\GitEditor\editor-pro\      ← 聚合目录（名字不固定）
 | 代码托管 | 自建内网 GitLab（不是 GitHub），走 MR 工作流 |
 | 项目管理 | ONES 工单（单号形如 PRO-159115、BUG-123），AI 会话里常直接粘贴工单标题 + 链接 |
 | 分支模型 | 环境分支模型：dev / 4.2 / 4.1 / 3.2 / 3.1 等环境分支长期存在且受保护；任务分支从所属环境拉出，命名 {user}/{feat\|fix}/{version}-{ticket}，如 jiangshun/fix/4.1-PRO-159115，完成后经 MR 合回所属环境 |
-| AI 工具 | Claude Code + 本配置仓库（claude-skill-lab）锻造的技能/命令，git-flow 套件即由此交付 |
+| AI 工具 | Claude Code + 本配置仓库（claude-skill-lab）锻造的技能/命令，gitflow 套件即由此交付 |
 
 ### 1.5 一个容易踩坑的细节：各仓库分支命名不同构
 
-有个仓库（pro-api）的分支管理与 EDA 版本绑定，但分支名编号与版本号不一致，例如 pro-api/0.3 同时对应 pro-ui 的 3.1 ~ 4.1 多个环境。也就是说“环境名 → 远端分支名”在不同仓库不是简单的同构映射。git-flow 配置里 envs 字段设计成“环境名 → 完整远端分支名”的显式映射，恰好能覆盖这种情况，这是 v0.1 设计的一个亮点，但文档里还没有体现这种用法的示例。
+有个仓库（pro-api）的分支管理与 EDA 版本绑定，但分支名编号与版本号不一致，例如 pro-api/0.3 同时对应 pro-ui 的 3.1 ~ 4.1 多个环境。也就是说“环境名 → 远端分支名”在不同仓库不是简单的同构映射。gitflow 配置里 envs 字段设计成“环境名 → 完整远端分支名”的显式映射，恰好能覆盖这种情况，这是 v0.1 设计的一个亮点，但文档里还没有体现这种用法的示例。
 
 ## 二、对 v0.1 的总体评价
 
 先说结论：设计质量高，可以按现状部署实测。
 
 * “停摆优先”哲学贯彻彻底（core 的禁令清单、每命令的停摆条件），符合 AI 工具“可预测、可中断、可恢复”的目标
-* git-flow-core 单一规则来源 + 命令只写差异，避免了四个命令的规则漂移
+* gitflow-core 单一规则来源 + 命令只写差异，避免了四个命令的规则漂移
 * 若干实战坑位处理正确：`--no-track` 防止任务分支误跟踪环境分支、首次 `push -u HEAD` 建立正确上游、`git merge-tree --write-tree` 只读冲突预检、glab 不可用时降级为手动入口
 * envs 显式映射天然支持上面 1.5 的分支名错位问题
 
@@ -77,7 +77,7 @@ D:\Code\GitEditor\editor-pro\      ← 聚合目录（名字不固定）
 
 问题：结合 1.2 / 1.3 的环境，这条边界有两个实际后果：
 
-1. **静默遗漏（最容易出事故）**：一个会话里 AI 同时改了 pro-ui 和 pro-pcb，`/git-flow-commit` 只处理当前仓库，兄弟仓库的改动不会得到任何提示，容易被遗忘到第二天甚至忘记提交。
+1. **静默遗漏（最容易出事故）**：一个会话里 AI 同时改了 pro-ui 和 pro-pcb，`/gitflow:commit` 只处理当前仓库，兄弟仓库的改动不会得到任何提示，容易被遗忘到第二天甚至忘记提交。
 2. **切换成本**：要提交另一个仓库，得切目录、重新进入上下文，而实际上 core 里所有 git 命令已经是 `git -C <root>` 形式，基础设施并不排斥跨仓库操作。
 
 建议：分三步走，成本递增，每一步独立有价值：
@@ -90,9 +90,9 @@ D:\Code\GitEditor\editor-pro\      ← 聚合目录（名字不固定）
 
 其中步骤①改动量最小、防事故价值最大，是我认为的第一优先级。
 
-### P0-2：新增 /git-flow-init——配置自动生成
+### P0-2：新增 /gitflow:init——配置自动生成
 
-现状：接入一个工作区需要手写 `.claude/git-flow.json`。按我的环境，5 个常用仓库 × 3 个环境 = 15 条 envs 映射，逐条手写繁琐且极易写错（分支名前缀、环境拼写）。
+现状：接入一个工作区需要手写 `.claude/gitflow.json`。按我的环境，5 个常用仓库 × 3 个环境 = 15 条 envs 映射，逐条手写繁琐且极易写错（分支名前缀、环境拼写）。
 
 建议：新增初始化命令，自动生成配置草稿：
 
@@ -111,16 +111,16 @@ D:\Code\GitEditor\editor-pro\      ← 聚合目录（名字不固定）
 | 1 | glab 内网接入 | 自建 GitLab 需要 `glab auth login --hostname <内网域名>` 或配置 `GITLAB_HOST`；`meta.json` 的 install 是 `winget install glab.glab`，内网机器不一定能走 winget，停摆提示里建议补充内网安装/登录路径 |
 | 2 | 多行 description 传递 | MR 描述是多行 markdown，Windows bash 下 `--description "<多行>"` 的引号转义是高频坑；实测确认 `glab mr create` 是否支持 `--description-file` 类参数（类似 gh 的 `--body-file`），支持则优先用临时文件传递 |
 | 3 | glab 全链路 dry-run 校准 | merge 命令里“参数名以 `--help` 为准”的写法很好，建议首次部署就先跑 `--dry-run` 把 `glab mr list` / `glab mr create` 的实际参数校准一遍 |
-| 4 | 手动入口 URL 推导 | `git-flow-merge.md` 的手动创建入口依赖“GitLab 仓库 URL”，建议在 core 明确 `git remote get-url` → https URL 的转换规则（含 `ssh://git@host:port/group/repo.git` 与 `git@host:group/repo.git` 两种形式） |
-| 5 | 配置文档补 pro-api 类示例 | 在 `git-flow-config.md` 补一个“环境分支名与版本号不同构”的示例（如 `"4.1": "pro-api/0.3"`），把 envs 设计的这项能力显性化，防止使用者以为各仓库分支名必须同构 |
-| 6 | merge 流程 fetch 时序 | `git-flow-merge.md` 第 5 步推送状态校验（`rev-list HEAD..@{u}`）发生在 fetch（第 6 步）之前，用的是本地 remote-tracking 快照；若任务分支被其他机器推进过，会误报“本地与上游一致”。建议 fetch 提前到第 5 步之前 |
+| 4 | 手动入口 URL 推导 | `/gitflow:merge` 的手动创建入口依赖“GitLab 仓库 URL”，建议在 core 明确 `git remote get-url` → https URL 的转换规则（含 `ssh://git@host:port/group/repo.git` 与 `git@host:group/repo.git` 两种形式） |
+| 5 | 配置文档补 pro-api 类示例 | 在 `gitflow-config.md` 补一个“环境分支名与版本号不同构”的示例（如 `"4.1": "pro-api/0.3"`），把 envs 设计的这项能力显性化，防止使用者以为各仓库分支名必须同构 |
+| 6 | merge 流程 fetch 时序 | `/gitflow:merge` 第 5 步推送状态校验（`rev-list HEAD..@{u}`）发生在 fetch（第 6 步）之前，用的是本地 remote-tracking 快照；若任务分支被其他机器推进过，会误报“本地与上游一致”。建议 fetch 提前到第 5 步之前 |
 | 7 | 预检结果措辞 | merge-tree 预检基于 fetch 时点的 `origin/<env-branch>`，GitLab 服务端实际合并时目标分支可能又前进了（其他 MR 先合）。报告建议注明“预检基于 `<hash>` 时点的目标分支”，避免使用者过度信任“无冲突”结论 |
 
 ### P2：后续迭代方向
 
 | # | 项 | 说明 |
 | :--- | :--- | :--- |
-| 1 | /git-flow-promote（环境链提升） | 核心注意点：提升 MR 的源分支是环境分支（保护分支），与 core §5.1“保护分支禁止直接 push”不冲突（MR ≠ push），但需在 core 明确这条边界，避免执行时误停摆。逐级推进、每级独立 merge-tree 预检、卡住即停摆，与既有哲学一致 |
+| 1 | /gitflow:promote（环境链提升） | 核心注意点：提升 MR 的源分支是环境分支（保护分支），与 core §5.1“保护分支禁止直接 push”不冲突（MR ≠ push），但需在 core 明确这条边界，避免执行时误停摆。逐级推进、每级独立 merge-tree 预检、卡住即停摆，与既有哲学一致 |
 | 2 | sync 方向措辞歧义 | `README.md` 内容表与 sync 命令 description 均写“把任务分支同步到所属环境分支”，实际语义是“把所属环境最新改动合入任务分支”（环境分支 → 任务分支），方向读反会误解，建议统一改写 |
 | 3 | 停摆条件去重 | 四个命令各自的“停摆条件”章节与 core §2/§5 大量重复，与“core 单一规则来源”的初衷相悖。建议收敛为“通用停摆条件见 core §2/§5 + 本命令特有：...”，命令文档更短，规则改动只改一处 |
 | 4 | commit 检查项配置化预留 | v0.1 不做 tsc / 单元测试是合理的（编辑器大仓库 tsc 全量很慢）。建议在配置里预留 `commit.checks` 数组位，将来按项目启用检查时只改配置，不动四份命令文档 |
@@ -129,16 +129,16 @@ D:\Code\GitEditor\editor-pro\      ← 聚合目录（名字不固定）
 ## 四、建议的实施顺序
 
 第一轮（部署 + 防事故）
-1. 按现状部署，实测 `/git-flow-start` 与 `/git-flow-commit` 跑通主链路
+1. 按现状部署，实测 `/gitflow:start` 与 `/gitflow:commit` 跑通主链路
 2. 落地 P0-1 步骤①（多仓库遗漏检测）——改动最小、防事故价值最大
 3. 实测中顺带完成 P1 的校准项（glab / fetch 时序 / 文档示例）
 
 第二轮（降本）
-4. P0-2 `/git-flow-init` 配置自动生成
+4. P0-2 `/gitflow:init` 配置自动生成
 5. P0-1 步骤②③（--repo 参数、start 对齐分支）
 
 第三轮（按需）
-6. `/git-flow-promote`——等实际遇到环境提升需求再做
+6. `/gitflow:promote`——等实际遇到环境提升需求再做
 7. 其余 P2 文档与结构优化，随迭代顺手处理
 
-*基于 git-flow v0.1.0 评估，2026-11-03。
+*基于 gitflow v0.1.0 评估，2026-11-03。

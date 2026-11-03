@@ -1,10 +1,25 @@
-# CHANGELOG —— git-flow 变更历史
+# CHANGELOG —— gitflow 变更历史
 
-<!-- 记录 suites/git-flow/ 的每次变更。 -->
+<!-- 记录 suites/gitflow/ 的每次变更。 -->
+
+## v0.3.0（2026-11-03）
+
+### 破坏性变更
+
+- 全面改名 `gitflow`：套件目录 `suites/gitflow/`，共享技能 `gitflow-core`
+- 命令迁入 `commands/gitflow/` 命名空间，调用由 `/git-flow-*` 改为 `/gitflow:init`、`/gitflow:start`、`/gitflow:sync`、`/gitflow:commit`、`/gitflow:merge`
+- 配置文件名 `.claude/git-flow.json` → `.claude/gitflow.json`，全局键 `settings.json#gitFlow` → `#gitflow`，环境变量 `GIT_FLOW_CONFIG` → `GITFLOW_CONFIG`
+- 配置参考文档 `git-flow-config.md` → `gitflow-config.md`
+
+### 变更
+
+- `manifest.json` 映射改为 `commands/gitflow/*.md` → `~/.claude/commands/gitflow/`，部署后命令以 `/gitflow:*` 调用
+- 设计决策 2 更新为命名空间方案，新增决策 16 记录全面改名
+- 根 README、format-keeper 活动文档、项目计划文档同步新命名
 
 ## v0.2.0（2026-11-03）
 
-基于 [project-docs/plans/git-flow-improvements.md](../../project-docs/plans/git-flow-improvements.md) 的反馈优化。
+基于 [project-docs/plans/gitflow-improvements.md](../../project-docs/plans/gitflow-improvements.md) 的反馈优化。
 
 ### 新增
 

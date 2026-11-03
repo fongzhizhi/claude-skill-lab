@@ -12,7 +12,7 @@
 | 内部工作流优先 | `npm run prettier:auto` → `lc-build prettier -- --write` |
 | 失败才回退 | 主命令报错后，只接受 `package.json` 中作用于当前暂存区的脚本（`lint-staged`、`*:staged`、`git diff --cached`） |
 | 安全边界 | 冲突文件、未跟踪敏感文件暂停；不创建配置、不安装依赖、不改语义 |
-| 可内嵌 | 输出 `formatted / no_changes / skipped / failed` 状态，供 `/git-flow-commit` 判断停或继续 |
+| 可内嵌 | 输出 `formatted / no_changes / skipped / failed` 状态，供 `/gitflow:commit` 判断停或继续 |
 | 与 keeper 分工 | 纯格式化；命名/魔法数字/结构交给 `style-keeper`，乱码交给 `mojibake-fixer` |
 
 ## 前置依赖
@@ -57,7 +57,7 @@ git add -A
 
 ## 内嵌到提交流水线
 
-`/git-flow-commit` 按以下顺序调用本技能（技能内提供可引用的规则片段）：
+`/gitflow:commit` 按以下顺序调用本技能（技能内提供可引用的规则片段）：
 
 ```text
 git add . → format-keeper → mojibake-fixer → git add . → commit-draft → git commit → git push

@@ -1,13 +1,13 @@
 ---
-name: git-flow-merge
+name: "gitflow:merge"
 description: 为任务分支创建合入所属环境的 GitLab MR：fetch 后校验推送状态，用 git merge-tree 做只读冲突预检并注明快照，生成 MR 标题/描述（优先复用仓库模板），通过 glab 创建并输出链接。支持 --repo 操作配置中的兄弟仓库，并在执行前检测其他仓库的遗漏改动。有冲突、未推送、环境不匹配或 glab 不可用时停摆，不自动解决冲突。
 category: git
 ---
-# /git-flow-merge
+# /gitflow:merge
 
-为当前任务分支创建合入环境分支的 MR，并在创建前做只读冲突预检。**执行前必须先读取 `~/.claude/skills/git-flow-core/SKILL.md`**。
+为当前任务分支创建合入环境分支的 MR，并在创建前做只读冲突预检。**执行前必须先读取 `~/.claude/skills/gitflow-core/SKILL.md`**。
 
-> v0.2 只创建“任务分支 → 所属环境”的 MR。环境链提升（4.1 → 4.2 → dev）属于后续 `/git-flow-promote`，不在本命令内自动执行。
+> v0.3 只创建“任务分支 → 所属环境”的 MR。环境链提升（4.1 → 4.2 → dev）属于后续 `/gitflow:promote`，不在本命令内自动执行。
 
 ## 参数
 
@@ -21,10 +21,10 @@ category: git
 | `--dry-run` | 只做检查和生成 MR 内容，不创建 |
 
 ```text
-/git-flow-merge
-/git-flow-merge --repo pro-pcb
-/git-flow-merge --reviewer @zhangsan
-/git-flow-merge --to 4.2 --dry-run
+/gitflow:merge
+/gitflow:merge --repo pro-pcb
+/gitflow:merge --reviewer @zhangsan
+/gitflow:merge --to 4.2 --dry-run
 ```
 
 ## 流程
@@ -64,7 +64,7 @@ category: git
    git -C <root> rev-list --count 'HEAD..@{u}'
    ```
 
-   - 无上游 → 停摆，提示先 `/git-flow-commit`
+   - 无上游 → 停摆，提示先 `/gitflow:commit`
    - 本地领先（未推送）→ 停摆，提示先 push
    - 远端领先（本地落后）→ 停摆，提示先处理远端任务分支
    - 仅当本地与上游一致才继续
@@ -176,11 +176,11 @@ category: git
 
       > 不用 `git push -o merge_request.create` 兜底：分支已完整推送时 push 是 no-op，不会创建 MR。
 
-14. **输出结果**：MR 链接、源/目标分支、冲突预检快照与结果、审核人、是否 Draft、是否删除源分支。若创建了 MR，提示合并后按链式模型处理后续环境提升（后续版本提供 `/git-flow-promote`）。
+14. **输出结果**：MR 链接、源/目标分支、冲突预检快照与结果、审核人、是否 Draft、是否删除源分支。若创建了 MR，提示合并后按链式模型处理后续环境提升（后续版本提供 `/gitflow:promote`）。
 
 `--dry-run`：执行到第 12 步前停止，输出预检结果、标题、描述和手动创建入口，不调用 `glab`。
 
-> **首次接入校准**：先核对 `glab auth status`、`glab mr list --help`、`glab mr create --help` 的实际参数；`/git-flow-merge --dry-run` 只校准套件自身的标题/描述/入口，不调用 glab，不能替代 glab 参数校准。
+> **首次接入校准**：先核对 `glab auth status`、`glab mr list --help`、`glab mr create --help` 的实际参数；`/gitflow:merge --dry-run` 只校准套件自身的标题/描述/入口，不调用 glab，不能替代 glab 参数校准。
 
 ## 停摆条件
 
@@ -198,7 +198,7 @@ category: git
 ## 输出示例
 
 ```text
-## git-flow merge
+## gitflow:merge
 - 操作仓库: pro-ui（D:/work/pro-ui）
 - 当前分支: jiangshun/fix/4.1-PRO-159115
 - 目标环境: 4.1（分支名）

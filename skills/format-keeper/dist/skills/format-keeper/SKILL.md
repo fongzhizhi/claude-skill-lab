@@ -45,7 +45,7 @@ git -C <root> diff --name-only --diff-filter=U
 git -C <root> ls-files --others --exclude-standard
 ```
 
-命中以下模式 → `failed`，列出文件，让用户确认或加入 `.gitignore`；不擅自删除、不擅自修改 `.gitignore`。若调用方（如 `/git-flow-commit`）已在本轮明确获得用户对这些文件的提交确认，可继续：
+命中以下模式 → `failed`，列出文件，让用户确认或加入 `.gitignore`；不擅自删除、不擅自修改 `.gitignore`。若调用方（如 `/gitflow:commit`）已在本轮明确获得用户对这些文件的提交确认，可继续：
 
 - `.env`、`.env.*`（`.env.example`、`.env.sample`、`.env.template` 除外）
 - `*.pem`、`*.key`、`*.p12`、`*.pfx`、`id_rsa`、`id_ed25519`
@@ -138,14 +138,14 @@ cd <root> && git diff HEAD --name-only --diff-filter=d | xargs lc-build prettier
 
 状态语义（供调用方判断）：
 
-| 状态 | 含义 | 调用方（如 `/git-flow-commit`） |
+| 状态 | 含义 | 调用方（如 `/gitflow:commit`） |
 | --- | --- | --- |
 | `formatted` | 格式化命令成功，已重新 `git add -A` | 继续 |
 | `no_changes` | 相对 HEAD 没有变更文件 | 继续 |
 | `skipped` | 主命令失败且没有可用的暂存区回退脚本 | 继续（记录警告，提交不阻塞） |
 | `failed` | 冲突/敏感文件/暂存失败/回退脚本执行报错/候选不唯一 | **停摆**，交给用户 |
 
-## 内嵌调用片段（供 `/git-flow-commit` 等引用）
+## 内嵌调用片段（供 `/gitflow:commit` 等引用）
 
 ```text
 格式化步骤（format-keeper）：

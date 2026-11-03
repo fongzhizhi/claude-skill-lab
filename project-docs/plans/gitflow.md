@@ -551,27 +551,27 @@ pro-pcb: jiangshun/fix/4.1-PRO-159115
 
 ## 十四、实施决策（2026-11-02）
 
-评估后确认的调整，已落地到 [suites/git-flow](../../suites/git-flow/README.md)：
+评估后确认的调整，已落地到 [suites/gitflow](../../suites/gitflow/README.md)：
 
 | 项 | 决策 |
 |----|------|
-| 指令命名 | 统一改为 `git-flow-*`：`/git-flow-start`、`/git-flow-sync`、`/git-flow-commit`、`/git-flow-merge`，避免与 Git 原生命令混淆 |
+| 指令命名 | 统一使用 `gitflow:` 命名空间：`/gitflow:init`、`/gitflow:start`、`/gitflow:sync`、`/gitflow:commit`、`/gitflow:merge`，避免与 Git 原生命令混淆 |
 | 环境同步 | **链式**：任务分支只合回所属环境；环境之间按 `chain` 顺序逐级 MR 提升（`4.1 → 4.2 → dev`） |
 | 未指定环境 | 默认 `default_env`，即链式顶端（通常 `dev`） |
 | 异常处理 | AI 不能快速解决的异常一律**停摆询问**，不猜测、不重试、不绕过 |
-| 配置位置 | 仓库根 `.claude/git-flow.json`（项目映射，建议提交）；全局默认放 `settings/profiles/_base.json` 的 `gitFlow` 字段，经 `switch` 合并进 `~/.claude/settings.json` |
+| 配置位置 | 仓库根 `.claude/gitflow.json`（项目映射，建议提交）；全局默认放 `settings/profiles/_base.json` 的 `gitflow` 字段，经 `switch` 合并进 `~/.claude/settings.json` |
 | 提交流水线 | `git add -A` → `format-keeper` → `mojibake-fixer` → `git add -A` → `commit-draft` → `git commit` → `git push`；v0.1 暂不含 TS 检查与单元测试 |
-| 格式化 | 独立为 `skills/format-keeper`，可单独运行，也被 `/git-flow-commit` 内嵌引用 |
+| 格式化 | 独立为 `skills/format-keeper`，可单独运行，也被 `/gitflow:commit` 内嵌引用 |
 | 分支创建 | `git checkout --no-track -b`，避免任务分支跟踪环境分支导致 `git push` 误推/被拒 |
-| MR 范围 | v0.1 只创建“任务分支 → 所属环境”的 MR；环境链提升规划为 `/git-flow-promote`（P2） |
+| MR 范围 | v0.1 只创建“任务分支 → 所属环境”的 MR；环境链提升规划为 `/gitflow:promote`（P2） |
 | MR 通道 | 优先 `glab`；不可用时停摆并给出手动创建入口（分支已推送时 `git push -o merge_request.create` 是 no-op，不作兜底） |
 | 冲突 | 只预检不解决：sync 冲突停摆；merge 用 `git merge-tree --write-tree --name-only` 只读预检 |
 
 已落地模块：
 
 - [skills/format-keeper](../../skills/format-keeper/README.md) —— 纯格式化技能
-- [suites/git-flow](../../suites/git-flow/README.md) —— 4 个命令 + `git-flow-core` 共享技能 + 配置参考
+- [suites/gitflow](../../suites/gitflow/README.md) —— 5 个命令（`/gitflow:*`）+ `gitflow-core` 共享技能 + 配置参考
 
-后续迭代：`/git-flow-promote`（链式环境提升）、TS/测试检查、glab 参数实测校准、多仓库配置实测。
+后续迭代：`/gitflow:promote`（链式环境提升）、TS/测试检查、glab 参数实测校准、多仓库配置实测。
 
 _本文档随实践演进持续更新。_

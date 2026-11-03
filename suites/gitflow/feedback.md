@@ -2,9 +2,19 @@
 
 <!-- 记录使用过程中发现的问题与改进建议。 -->
 
+## v0.3.0 改名（2026-11-03）
+
+- 来源：用户建议——参考 OpenSpec 套件结构，命令统一放入 `commands/gitflow/` 父目录，调用为 `/gitflow:start` 等
+- 采纳：全面改名 `gitflow`（套件目录、共享技能、命令命名空间、配置文件名、全局键、环境变量）
+- 决策：
+  - 命令命名空间与套件同名，`~/.claude/commands/gitflow/*.md` → `/gitflow:*`，不再把命令文件平铺在 `commands/` 根目录
+  - 配置改为 `.claude/gitflow.json`、全局键 `gitflow`、环境变量 `GITFLOW_CONFIG`，不保留旧名兼容（v0.3 尚未部署，无迁移成本）
+  - 历史 CHANGELOG / feedback 条目保留当时的旧名，仅修正已移动计划文件的链接
+- 待实测：`/gitflow:*` 在 Claude Code 中的命令解析与补全、部署后 `claude-lab status` 的映射核对
+
 ## v0.2.0 优化（2026-11-03）
 
-- 来源：[project-docs/plans/git-flow-improvements.md](../../project-docs/plans/git-flow-improvements.md)（基于 v0.1.0 的多仓库环境使用反馈）
+- 来源：[project-docs/plans/gitflow-improvements.md](../../project-docs/plans/gitflow-improvements.md)（基于 v0.1.0 的多仓库环境使用反馈）
 - 采纳并落地：
   - P0-1 多仓库协同三步：遗漏检测（默认只读提醒）、`--repo <name>` 显式操作兄弟仓库、`/git-flow-start --repos` 创建对齐分支
   - P0-2 `/git-flow-init`：扫描仓库、探测远端环境分支、草稿确认后落盘
@@ -33,7 +43,7 @@
 
 ## 初始创建（2026-11-02）
 
-- 需求来源：[project-docs/plans/git-flow.md](../../project-docs/plans/git-flow.md)；经评估后用户确认：环境分支采用链式同步、未指定环境默认链式顶端（通常 `dev`）、异常停摆询问用户、指令名改为 `git-flow-*`、提交前走“add → 格式化 → 乱码修复 → add → commit-draft → commit → push”。
+- 需求来源：[project-docs/plans/gitflow.md](../../project-docs/plans/gitflow.md)；经评估后用户确认：环境分支采用链式同步、未指定环境默认链式顶端（通常 `dev`）、异常停摆询问用户、指令名改为 `git-flow-*`、提交前走“add → 格式化 → 乱码修复 → add → commit-draft → commit → push”。
 - 决策：
   - 采用聚合套件 + `git-flow-core` 共享技能，避免四个命令复制规则。
   - 配置以仓库 `.claude/git-flow.json` 为主，全局默认放 `settings.json#gitFlow`（由 `_base.json` 维护）；不直接依赖 `~/.claude/settings.json` 的手工改动。

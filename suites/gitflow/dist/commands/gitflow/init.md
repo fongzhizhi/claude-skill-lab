@@ -1,13 +1,13 @@
 ---
-name: git-flow-init
-description: 扫描多仓库工作区生成 .claude/git-flow.json 配置草稿：发现兄弟仓库，按环境列表探测远端环境分支，生成并校验草稿，人工确认后落盘；支持单仓库模式。仓库/环境映射无法自动推断、仓库不可用或目标文件已存在时停摆询问，不猜测映射。
+name: "gitflow:init"
+description: 扫描多仓库工作区生成 .claude/gitflow.json 配置草稿：发现兄弟仓库，按环境列表探测远端环境分支，生成并校验草稿，人工确认后落盘；支持单仓库模式。仓库/环境映射无法自动推断、仓库不可用或目标文件已存在时停摆询问，不猜测映射。
 category: git
 ---
-# /git-flow-init
+# /gitflow:init
 
-接入 git-flow 的第一步：扫描工作区、探测远端环境分支、生成配置草稿。**先展示、后落盘**；任何无法自动确定的映射都停摆询问，不猜测。
+接入 gitflow 的第一步：扫描工作区、探测远端环境分支、生成配置草稿。**先展示、后落盘**；任何无法自动确定的映射都停摆询问，不猜测。
 
-执行前读取 `~/.claude/skills/git-flow-core/SKILL.md` 的 §1.2 / §1.3（字段与校验规则）。本命令**不按 core §1.1 查找配置**——它的任务就是在配置缺失时生成配置；全局默认（`~/.claude/settings.json` 的 `gitFlow`）仍可作为默认值来源。
+执行前读取 `~/.claude/skills/gitflow-core/SKILL.md` 的 §1.2 / §1.3（字段与校验规则）。本命令**不按 core §1.1 查找配置**——它的任务就是在配置缺失时生成配置；全局默认（`~/.claude/settings.json` 的 `gitflow`）仍可作为默认值来源。
 
 ## 参数
 
@@ -16,18 +16,18 @@ category: git
 | `--dir <path>` | 扫描目录；缺省：当前目录在 Git 仓库内时用仓库根目录的父目录，否则用当前目录 |
 | `--repos <a,b,c>` | 只处理指定名称的兄弟仓库；缺省扫描扫描目录下所有直接子仓库 |
 | `--single` | 单仓库模式：只为当前仓库生成配置（`path` 为 `.`），不扫描兄弟仓库；与 `--dir`/`--repos` 互斥 |
-| `--envs <e1,e2,...>` | 环境列表，从低到高，如 `3.1,3.2,4.1,4.2,dev`；缺省读取全局 `gitFlow.chain`，都没有则停摆询问 |
+| `--envs <e1,e2,...>` | 环境列表，从低到高，如 `3.1,3.2,4.1,4.2,dev`；缺省读取全局 `gitflow.chain`，都没有则停摆询问 |
 | `--active <e,...>` | 在用环境子集；缺省等于 `--envs` |
 | `--default-env <env>` | 未指定环境时的默认值；缺省为 `active` 最后一项（链式顶端） |
-| `--remote <name>` | 远端名，缺省 `origin`（或全局 `gitFlow.remote`） |
+| `--remote <name>` | 远端名，缺省 `origin`（或全局 `gitflow.remote`） |
 | `--output <path>` | 输出路径；缺省见“输出位置” |
 | `--dry-run` | 只输出草稿与校验结果，不落盘 |
 
 ```text
-/git-flow-init --envs 3.1,3.2,4.1,4.2,dev
-/git-flow-init --envs 4.1,4.2,dev --repos pro-ui,pro-pcb,pro-api
-/git-flow-init --single --envs 4.1,4.2,dev
-/git-flow-init --envs 4.1,4.2,dev --dry-run
+/gitflow:init --envs 3.1,3.2,4.1,4.2,dev
+/gitflow:init --envs 4.1,4.2,dev --repos pro-ui,pro-pcb,pro-api
+/gitflow:init --single --envs 4.1,4.2,dev
+/gitflow:init --envs 4.1,4.2,dev --dry-run
 ```
 
 ## 流程
@@ -48,10 +48,10 @@ category: git
 
 3. **确定环境参数**：
 
-   - `--envs` → `chain`；否则全局 `gitFlow.chain`；都没有 → 停摆，请用户提供环境列表
+   - `--envs` → `chain`；否则全局 `gitflow.chain`；都没有 → 停摆，请用户提供环境列表
    - `active`：`--active`，缺省等于 `chain`
    - `default_env`：`--default-env`，缺省 `active` 最后一项
-   - `remote`：`--remote`，缺省全局 `gitFlow.remote`，再缺省 `origin`
+   - `remote`：`--remote`，缺省全局 `gitflow.remote`，再缺省 `origin`
    - 校验：`active` 是 `chain` 子集、`default_env` 在 `active` 中；失败 → 停摆
 
 4. **探测远端环境分支**（每个仓库一次）：
@@ -91,12 +91,12 @@ category: git
 
 6. **确定输出位置与路径基准**：
 
-   - `--single`：缺省 `<当前仓库>/.claude/git-flow.json`
-   - 扫描模式：缺省 `<扫描根目录>/.claude/git-flow.json`
+   - `--single`：缺省 `<当前仓库>/.claude/gitflow.json`
+   - 扫描模式：缺省 `<扫描根目录>/.claude/gitflow.json`
    - `--output` 覆盖（相对路径按当前目录解析）
    - 配置 base = 输出文件所在目录；若目录名为 `.claude` 则取其上一级（与 core §1.1 一致）
    - 每个仓库的 `path` = 仓库根目录相对 base 的路径，分隔符统一为 `/`；同一目录写 `"."`
-   - 例：`<workspace>/.claude/git-flow.json` → `"pro-ui": {"path": "pro-ui"}`；`<repo>/.claude/git-flow.json` → `"path": "."`
+   - 例：`<workspace>/.claude/gitflow.json` → `"pro-ui": {"path": "pro-ui"}`；`<repo>/.claude/gitflow.json` → `"path": "."`
 
 7. **生成草稿**（最小完整结构，不写可选默认值）：
 
@@ -144,7 +144,7 @@ category: git
      pro-pcb  path=pro-pcb  dev→pro-pcb/dev 4.2→pro-pcb/4.2 4.1→pro-pcb/4.1
      pro-api  path=pro-api  dev→pro-api/dev 4.2→pro-api/0.4 4.1→pro-api/0.3
 
-   目标文件: D:/Code/GitEditor/editor-pro/.claude/git-flow.json
+   目标文件: D:/Code/GitEditor/editor-pro/.claude/gitflow.json
    确认写入？
    ```
 
@@ -157,7 +157,7 @@ category: git
     - 以 2 空格缩进、UTF-8 写入；不修改 `.gitignore`
     - `--dry-run`：到此为止，只输出草稿、摘要与目标路径
 
-11. **输出结果**：配置文件路径、仓库数、环境映射数、下一步（从任意仓库运行 `/git-flow-start` 验证；工作区根目录的配置不在任何仓库内，如需团队共享可复制到各仓库的 `.claude/git-flow.json`）。
+11. **输出结果**：配置文件路径、仓库数、环境映射数、下一步（从任意仓库运行 `/gitflow:start` 验证；工作区根目录的配置不在任何仓库内，如需团队共享可复制到各仓库的 `.claude/gitflow.json`）。
 
 ## 停摆条件
 
