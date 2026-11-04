@@ -117,6 +117,7 @@ category: git
     - 审核人取第 7 步结果；`{{reviewers}}` 填 `@a @b`。审核人为空时**删除整条 `/assign_reviewer` 行**，依赖 CODEOWNERS，不留空指令
     - `{{merge_type}}` 填实际类型（当前环境 / 链式同步 / 用户指定）；模板中紧跟其后的候选说明只用于提示可选值，写入 MR 时一并替换，不保留括号列表
     - 若仓库存在 `.gitlab/merge_request_templates/cross-version.md`，读取并填充占位符：`{{ticket}}`、`{{summary}}`、`{{source_branch}}`、`{{target_branch}}`、`{{merge_type}}`、`{{reviewers}}`
+    - **自测条目按实际范围裁剪**：`## 自测情况` 只保留本次真正适用的条目，不保留“（如有）”之类的空占位。本次改动没有新增或修改测试文件（按 `git diff --name-only <remote>/<env-branch>...HEAD` 匹配 `*.test.*`、`*.spec.*`、`__tests__/`、`test/`、`tests/`）时，删除“单元测试”行；有测试改动时保留或追加 `- [ ] 单元测试通过`。仓库模板中的同类空占位也按此规则删除
     - 无模板时使用以下结构（**`## 合并链路` 内每行之间留空行**，否则 GitLab 会把连续行渲染成同一段）：
 
       ```markdown
@@ -135,7 +136,6 @@ category: git
 
       ## 自测情况
       - [ ] 本地验证通过
-      - [ ] 单元测试通过（如有）
 
       /assign_reviewer @<reviewer1> @<reviewer2>
       ```
