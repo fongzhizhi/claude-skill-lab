@@ -7,6 +7,8 @@ category: git
 
 从 ONES 工单创建任务分支。**执行前必须先读取 `~/.claude/skills/gitflow-core/SKILL.md`**，配置读取、操作仓库、前置检查、环境解析、工单解析、分支命名与安全边界全部以 core 为准；本文件只描述 start 的独有流程。
 
+- 开发中发现本次任务还需修改其他仓库时，先在对应仓库创建同名任务分支再修改（core §2.5.1）：`/gitflow:start <单号> --repo <仓库名> --branch <当前任务分支名>`
+
 ## 参数
 
 | 参数 | 说明 |
@@ -43,7 +45,7 @@ heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
    目标环境: dev（未指定环境，使用链式顶端默认值）
    ```
 
-6. **确定分支类型**：`--type` → 用户措辞（缺陷/修复 → fix；需求/新增 → feat）→ ONES 前缀映射 → 无法确定则停摆。**用户说是缺陷时，`PRO-*` 也建 `fix` 分支。**
+6. **确定分支类型**：`--type` → 用户措辞（缺陷/修复 → fix；需求/新增 → feat）→ ONES 前缀映射 → 无法确定则停摆。**用户说是缺陷时，`PRO-*` 也建 `fix` 分支。** `--branch` 已显式给出分支名时可跳过本步的类型推断。
 
 7. **生成分支名**：按 `branch_pattern` 替换并校验：
 
@@ -131,7 +133,7 @@ heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
 
     任一仓库失败 → 停摆，报告已创建与未创建的仓库；不自动删除已创建分支。
 
-14. **输出结果**：操作仓库、分支名、基于的环境分支、工单、目标环境及依据、对齐仓库表（仓库 / 分支 / 是否新建 / 是否已切换）、下一步建议（`/gitflow:commit`）。首次 push 由 `/gitflow:commit` 用 `git push -u <remote> HEAD` 完成（`<remote>` 缺省 `origin`）。
+14. **输出结果**：操作仓库、分支名、基于的环境分支、工单、目标环境及依据、对齐仓库表（仓库 / 分支 / 是否新建 / 是否已切换）、下一步建议（`/gitflow:commit`）。首次 push 由 `/gitflow:commit` 用 `git push -u <remote> HEAD` 完成（`<remote>` 缺省 `origin`）。开发中发现其他仓库也要改时，提示先按 core §2.5.1 用 `--repo <仓库名> --branch <当前任务分支名>` 建对齐分支。
 
 ## 停摆条件
 
@@ -164,5 +166,5 @@ heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
 ### 结果
 - 状态: 成功
 - 分支: jiangshun/fix/4.1-PRO-159115（操作仓库，已切换）
-- 下一步: 开发完成后运行 /gitflow:commit；兄弟仓库用 --repo 处理
+- 下一步: 开发完成后运行 /gitflow:commit；开发中发现其他仓库也要改时，先用 --repo <name> --branch <当前分支> 建对齐分支（core §2.5.1）
 ```

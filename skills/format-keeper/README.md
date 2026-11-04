@@ -60,8 +60,10 @@ git add -A
 `/gitflow:commit` 按以下顺序调用本技能（技能内提供可引用的规则片段）：
 
 ```text
-git add . → format-keeper → mojibake-fixer → git add . → commit-draft → git commit → git push
+git add . → mojibake-fixer → format-keeper → git add . → commit-draft → git commit → git push
 ```
+
+- 乱码修复先于格式化：修复会改写文本、可能改变行长，格式化最后执行以重新归一
 
 - `format-keeper` 内部也会执行 `git add -A`，调用方的暂存步骤可以保留，重复执行无副作用
 - `formatted` / `no_changes` / `skipped` → 继续

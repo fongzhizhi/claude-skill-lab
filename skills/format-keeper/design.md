@@ -4,7 +4,7 @@
 
 ### 背景
 
-`gitflow` 的提交流水线需要“先统一格式，再检查乱码/类型/测试，最后提交”。格式化是其中相对独立、可复用的一步：它既要在提交前自动执行，也要能单独手动跑。仓库已有 `style-keeper`（TS 命名/魔法数字/结构）和 `mojibake-fixer`（乱码），但前者目标更广、后者职责不同，缺少一个**纯格式化**的执行者。
+`gitflow` 的提交流水线需要“先修复乱码，再统一格式，最后提交”。格式化是其中相对独立、可复用的一步：它既要在提交前自动执行，也要能单独手动跑。仓库已有 `style-keeper`（TS 命名/魔法数字/结构）和 `mojibake-fixer`（乱码），但前者目标更广、后者职责不同，缺少一个**纯格式化**的执行者。
 
 初版按主流方式检测 Prettier / ESLint / Biome / 语言工具。实际使用中发现团队成员日常依赖内部工作流：项目 `package.json` 通常有 `prettier:auto`，没有时用 `lc-build prettier`。继续走通用检测既慢又容易与内部脚本不一致，因此 v0.2.0 改为**内部工作流优先**。
 
@@ -62,11 +62,11 @@ git add -A → git diff HEAD → 格式化 → git add -A
 ### 与现有模块的关系
 
 - `style-keeper`：风格治理；本技能是其格式化步骤的潜在复用点
-- `mojibake-fixer`：乱码修复；格式化后如出现乱码，交由它处理
+- `mojibake-fixer`：乱码修复；在提交流水线中先于格式化执行，避免修复改动破坏刚生成的格式
 - `commit-draft`：commit message 生成；本技能不提交
-- `gitflow` 套件：`/gitflow:commit` 按“add → format → mojibake → add → commit-draft → commit → push”调用
+- `gitflow` 套件：`/gitflow:commit` 按“add → mojibake → format → add → commit-draft → commit → push”调用
 
-### 已知限制（v0.2.0）
+### 已知限制（v0.2.1）
 
 - 强依赖内部工作流：没有 `prettier:auto`、没有 `lc-build`、`package.json` 也没有暂存区脚本的项目会走 `skipped`，不会自动改用 Prettier/ESLint 配置
 - `lc-build` 的可用性检查命令（`lc-build --version`）与实际参数需在开发机实测校准

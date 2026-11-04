@@ -1,7 +1,7 @@
 {
   "name": "gitflow",
-  "version": "0.4.1",
-  "description": "Git 环境分支工作流套件：/gitflow:init、/gitflow:start、/gitflow:sync、/gitflow:commit、/gitflow:merge 五个命令与共享核心技能，覆盖唯一全局配置的创建/增量更新、分支前缀与活跃时间过滤的环境链自动探测与漂移提示、任务分支创建、多仓库协同、环境同步、格式化提交与 MR 冲突预检。",
+  "version": "0.5.0",
+  "description": "Git 环境分支工作流套件：/gitflow:init、/gitflow:start、/gitflow:sync、/gitflow:commit、/gitflow:merge、/gitflow:promote 六个命令与共享核心技能，覆盖唯一全局配置的创建/增量更新、非交互 init（严格 X.Y 版本号、环境链自动探测与漂移自动应用、未解析映射唯一候选自动补全）、仓库级审核人配置与 init 自动推断、任务分支创建与跨仓库对齐、多仓库协同、环境同步、受限冲突解决、格式化提交、MR 冲突预检与环境提升（cherry-pick 到更高环境）。",
   "type": "suite",
   "mappings": [
     {

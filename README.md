@@ -108,6 +108,7 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | **[test-keeper](skills/test-keeper/README.md)** | skill | 按测试规范补充与修复单元测试：无测试走方案，有测试审质量 |
 | **[live-debugger](skills/live-debugger/README.md)** | skill | 模拟人工 debugger 流程定位前端 bug：埋点 → 自动复现（Playwright MCP 优先）→ 收敛 → 修复清理 |
 | **[quick-start](skills/quick-start/README.md)** | skill | 快速验证功能/新改动：注入入口与数据，验证后清场恢复原状 |
+| **[format-keeper](skills/format-keeper/README.md)** | skill | 提交前统一格式化：先 `git add -A`，优先 `prettier:auto`、其次 `lc-build`，失败才回退暂存区脚本；输出状态供 `/gitflow:commit` 判断 |
 | **[ones-parser](skills/ones-parser/README.md)** | skill | 解析 ONES 平台复制的工单内容（ID / 标题 / 链接），作为 commit 引用的单一事实来源 |
 | **[month-log-summary](skills/month-log-summary/README.md)** | skill | 为 month-log 月日志补写「AI月总结」章节：仓库自动定位，三种指定方式，已存在即覆盖 |
 | **[commit-draft](commands/commit-draft/README.md)** | command | 基于暂存区生成 Conventional Commits 规范的 commit message |
@@ -116,19 +117,19 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | **[ts-standards](rules/ts-standards/README.md)** | rules | 5 条 TS 必备规则（注释/风格/类型/错误处理/测试），路径作用域自动生效 |
 | **[ts-code-guide](docs/ts-code-guide/README.md)** | docs | TS 规范参考文档（注释/风格/类型/错误处理/测试 5 份指南）→ `~/.claude/docs/`，按需引用不占上下文 |
 | **[openspec](suites/openspec/README.md)** | suite | 6 个 `/opsx:*` 斜杠命令，规范驱动开发（需全局安装 `openspec` CLI） |
+| **[gitflow](suites/gitflow/README.md)** | suite | 环境分支 + 任务分支 + 多仓库协同 + 环境提升工作流：`/gitflow:init`、`start`、`sync`、`commit`、`merge`、`promote` 6 个命令 + `gitflow-core` 技能 + 配置参考 |
 | **[settings](settings/README.md)** | settings | 多模型切换（`_base.json` + profiles 合并）+ 全局 `CLAUDE.md` 部署（`deploy settings`） |
 | **[gitinit](gitinit/README.md)** | gitinit | `~/.claude` 本地 git 追踪：`claude-lab gitinit` 覆盖 `.gitignore`（同 switch 覆盖 settings.json），追踪 deploy/switch 的文件变化 |
 
-### 🟡 待部署 / 规划中
+### 🟡 规划中
 
 | 模块 / 方向 | 说明 |
 | --- | --- |
-| **format-keeper** | 纯格式化 skill：先统一暂存，再优先 `prettier:auto`、其次 `lc-build`，失败才回退 package.json 暂存区脚本，供 gitflow 提交流水线内嵌（仓库已创建，待部署） |
-| **gitflow 套件** | 环境分支 + 任务分支 + 多仓库协同工作流：`/gitflow:init`、`/gitflow:start`、`/gitflow:sync`、`/gitflow:commit`、`/gitflow:merge`，见 [plans/gitflow.md](project-docs/plans/gitflow.md)（仓库已创建，待部署） |
 | **hooks 落地** | 部署后自动核对一致性、提交前提醒等自动化 hook |
 | **agents 子代理** | 规范审查专用代理，主对话只拿结论，省上下文 |
 | **workflows 编排** | 批量重构 / 批量规范审查等多 agent 并行场景 |
 | **AI 辅助自动化测试 / Skill 评测** | 三层混合架构：语义化标签 + Page Object + AI 只做维护，见 [plans/ai-assisted-testing.md](project-docs/plans/ai-assisted-testing.md)（未来研究，需被测项目有测试框架） |
+| **Claude 会话状态看板** | 置顶常驻小窗聚合所有 Claude Code 会话状态（询问中 / 进行中 / 已完成 / 已中断），重点提醒需处理的会话，避免多会话并行时卡住，见 [plans/session-review.md](project-docs/plans/session-review.md) |
 
 类型目录：`hooks/` · `workflows/` · `agents/` 已预留，按需生长
 
@@ -142,11 +143,12 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | 想按规范整理/修复代码注释 | `/comment-keeper`（可指定文件/目录/函数） |
 | 想统一命名/清理魔法数字 | `/style-keeper`（可指定文件/目录） |
 | 想格式化代码 | `/format-keeper`（统一暂存并格式化全部 git 变更；优先 `prettier:auto` / `lc-build`） |
-| 想生成 gitflow 配置 | `/gitflow:init`（只识别仓库名开头的版本/环境分支且一年内活跃；默认只处理当前仓库，`--all` 扫描父目录下全部仓库；直接写入 `~/.claude/gitflow.json`） |
-| 想按 ONES 单创建任务分支 | `/gitflow:start <工单内容/单号> [环境]`（`--repos` 为兄弟仓库建对齐分支） |
-| 想把环境最新改动合入任务分支 | `/gitflow:sync [环境]` |
-| 想提交并推送任务分支 | `/gitflow:commit`（默认 push，`--no-push` 只提交，`--repo` 操作兄弟仓库） |
-| 想创建合入环境的 MR | `/gitflow:merge`（可 `--reviewer`、`--repo`、`--dry-run`） |
+| 想生成 gitflow 配置 | `/gitflow:init`（只识别仓库名开头的 `X.Y` 版本/环境分支且一年内活跃，`3.2.0918` 之类多段数字排除；默认只处理当前仓库，`--all` 扫描父目录下全部仓库；未解析映射唯一候选自动补全、否则留空列候选；全程不询问；从默认环境分支最近 10 条 merge 推断仓库审核人；直接写入 `~/.claude/gitflow.json`） |
+| 想按 ONES 单创建任务分支 | `/gitflow:start <工单内容/单号> [环境]`（`--repos` 为兄弟仓库建对齐分支；开发中发现其他仓库要改时用 `--repo <name> --branch <当前分支>` 先建分支） |
+| 想把环境最新改动合入任务分支 | `/gitflow:sync [环境]`（冲突可在限额内让 AI 尝试解决，确认后提交） |
+| 想提交并推送任务分支 | `/gitflow:commit`（默认 push，`--no-push` 只提交；其他仓库仅在同名分支时自动提交，不同分支改动忽略；`--repo` 只操作指定仓库） |
+| 想创建合入环境的 MR | `/gitflow:merge`（审核人取 `repos.<name>.reviewers` / `mr.reviewers`，可 `--reviewer` / `--no-reviewer`；支持 `--repo`、`--dry-run`） |
+| 想把已合入的改动提升到更高环境 | `/gitflow:promote [环境]`（从目标环境新建任务分支 → cherry-pick 原提交 → 创建 MR；冲突限额内自动解决；多仓库用 `--repos`，`--dry-run` 只预览） |
 | 想修复类型安全漏洞 | `/type-keeper`（可指定文件/目录） |
 | 想修复错误处理问题 | `/error-handling-keeper`（可指定文件/目录） |
 | 想补充/修复单元测试 | `/test-keeper`（可指定模块/目录） |

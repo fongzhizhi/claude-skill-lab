@@ -2,6 +2,13 @@
 
 <!-- 记录 skills/format-keeper/ 的每次变更。 -->
 
+## v0.2.1（2026-11-04）
+
+### 文档
+
+- 同步 `/gitflow:commit` 流水线顺序调整：`mojibake-fixer` 先于 `format-keeper`，先修乱码再格式化，避免修复改动破坏格式；更新 README、design 与 gitflow 引用片段
+- 功能与部署文件（`dist/`）未变
+
 ## v0.2.0（2026-11-02）
 
 - 改为内部工作流优先：`npm run prettier:auto` → `lc-build prettier -- --write` → 仅报错时回退 `package.json` 暂存区脚本

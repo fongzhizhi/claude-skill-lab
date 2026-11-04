@@ -1,6 +1,6 @@
 ---
 name: "gitflow:commit"
-description: 在任务分支上完成提交流水线：git add -A → format-keeper 格式化 → mojibake-fixer 检查乱码 → git add -A → commit-draft 生成提交信息 → git commit → git push。默认推送；支持 --repo 操作配置中的兄弟仓库，并在执行前检测其他仓库的遗漏改动。格式化或乱码检查失败、分支不是任务分支、疑似敏感文件时停摆询问。
+description: 在任务分支上完成提交流水线：git add -A → mojibake-fixer 检查乱码 → format-keeper 格式化 → git add -A → commit-draft 生成提交信息 → git commit → git push。默认推送；支持 --repo 操作配置中的兄弟仓库。执行前检测其他仓库改动：与当前分支同名的仓库视为同一任务，自动按相同流水线提交；不同分支的改动一律忽略、不提示、不提交。乱码检查或格式化失败、分支不是任务分支、疑似敏感文件时停摆询问。
 category: git
 ---
 # /gitflow:commit
@@ -25,12 +25,16 @@ category: git
 ## 流水线
 
 ```text
-操作仓库解析 → 分支校验 → 多仓库遗漏检测 → 敏感文件检查
-→ git add -A → format-keeper → mojibake-fixer → git add -A
+操作仓库解析 → 分支校验 → 多仓库改动检测 → 敏感文件检查
+→ git add -A → mojibake-fixer → format-keeper → git add -A
 → commit-draft → git commit → git push
 ```
 
-任何一步失败立即停摆，不执行后续步骤；已产生的格式化/乱码修复改动保留在工作区，不自动回滚。
+乱码修复会改写文本内容（可能改变行长、字符宽度），先修复再格式化，避免修复后的内容不符合格式规则；格式化放在最后可覆盖前序步骤引入的格式偏差。
+
+操作仓库完成后，若缺省模式且存在「同任务待提交」的兄弟仓库（当前分支与操作仓库相同），对它们逐个执行相同流水线；不同分支的仓库改动一律忽略。兄弟仓库失败不阻断操作仓库，也不回滚。
+
+操作仓库任何一步失败立即停摆，不执行后续步骤；已产生的乱码修复/格式化改动保留在工作区，不自动回滚。
 
 ## 流程
 
@@ -47,7 +51,13 @@ category: git
    git -C <root> symbolic-ref -q --short HEAD
    ```
 
-4. **多仓库遗漏检测**：按 core §2.5 扫描配置中的其他仓库；有未提交改动、同名任务分支或仓库不可用 → 停摆提醒，用户选择继续后再进入下一步。
+4. **多仓库改动检测（不询问、不停摆）**：按 core §2.5 扫描配置中的其他仓库，分类为「同任务待提交」「同任务已干净」「其他任务改动」「无法自动处理」。
+
+   - 其他仓库与当前任务分支**同名且有未提交改动** → 视为同一任务，加入待提交清单（第 13 步处理）
+   - 其他仓库在**不同分支**上的改动 → 一律忽略，不提示确认、不提交
+   - 同名分支但 detached HEAD、处于 merge/rebase 等操作中 → 记入跳过清单，附原因
+   - 显式 `--repo <name>` → 本次只提交指定仓库，不自动提交任何兄弟仓库
+   - 检测结果只写入最终摘要，不要求用户选择
 
 5. **敏感文件检查**（在 `git add` 之前）：
 
@@ -77,15 +87,7 @@ category: git
 
    退出码 `0` → 报告“没有可提交的改动”，结束（不提交、不推送）。
 
-7. **格式化**：读取 `~/.claude/skills/format-keeper/SKILL.md`，按规则执行。该技能会先 `git add -A`，再按 `prettier:auto` → `lc-build` → `package.json` 暂存区脚本的顺序格式化；成功后再次 `git add -A`。
-
-   - **按 core §2.6 继承操作仓库上下文**：format-keeper 的仓库根固定为 `<root>`，其 `git` 命令使用 `-C <root>`，`npm run` / `lc-build` 必须在 `<root>` 下执行；不得使用会话当前目录
-   - 技能不存在 → 停摆，提示 `claude-lab deploy format-keeper`
-   - 第 5 步用户已明确确认敏感文件时，调用时说明该确认，避免 format-keeper 重复拦截
-   - 状态 `formatted` / `no_changes` / `skipped` → 继续
-   - 状态 `failed` → 停摆，输出原始错误，不提交
-
-8. **乱码检查**：先取 `<root>` 的变更文件清单，再显式传给 mojibake-fixer，避免它按会话当前仓库执行默认的 `git diff`：
+7. **乱码检查**：先取 `<root>` 的变更文件清单，再显式传给 mojibake-fixer，避免它按会话当前仓库执行默认的 `git diff`：
 
    ```bash
    git -C <root> diff HEAD --name-only --diff-filter=d
@@ -97,7 +99,16 @@ category: git
    - 修复后仍有无法可靠推断的 U+FFFD → 停摆，列出文件与位置，交由用户处理
    - 不强行猜测、不跳过未修复项直接提交
 
-9. **再次暂存**（格式化与乱码修复可能产生新改动）：
+8. **格式化**：读取 `~/.claude/skills/format-keeper/SKILL.md`，按规则执行。该技能会先 `git add -A`，再按 `prettier:auto` → `lc-build` → `package.json` 暂存区脚本的顺序格式化；成功后再次 `git add -A`。
+
+   - 必须在上一步乱码修复之后执行：乱码修复改写的文本可能改变行长/字符宽度，需要格式化重新归一
+   - **按 core §2.6 继承操作仓库上下文**：format-keeper 的仓库根固定为 `<root>`，其 `git` 命令使用 `-C <root>`，`npm run` / `lc-build` 必须在 `<root>` 下执行；不得使用会话当前目录
+   - 技能不存在 → 停摆，提示 `claude-lab deploy format-keeper`
+   - 第 5 步用户已明确确认敏感文件时，调用时说明该确认，避免 format-keeper 重复拦截
+   - 状态 `formatted` / `no_changes` / `skipped` → 继续
+   - 状态 `failed` → 停摆，输出原始错误，不提交
+
+9. **再次暂存**（乱码修复与格式化可能产生新改动）：
 
    ```bash
    git -C <root> add -A
@@ -111,7 +122,7 @@ category: git
     - 生成失败或内容为空 → 停摆，请用户提供提交信息；**不提交空信息**
     - 提交信息写入系统临时目录的文件（不写入仓库），提交后删除
 
-    > 配置 `commit.checks` 是预留字段，v0.4 不执行；不要把它当作已生效的检查。
+    > 配置 `commit.checks` 是预留字段，当前版本不执行；不要把它当作已生效的检查。
 
 11. **提交**：
 
@@ -133,18 +144,34 @@ category: git
 
     推送被拒绝（非快进、保护分支、权限、认证）→ 停摆，输出原因与可选方案；**绝不 force、绝不自动 pull/rebase**。
 
-13. **输出结果**：操作仓库、格式化状态、乱码修复情况、提交 hash 与 subject、推送结果（远端分支或“未推送”）、下一步建议（`/gitflow:sync` 或 `/gitflow:merge`）。
+13. **提交同任务兄弟仓库**（仅缺省模式且第 4 步有待提交仓库）：
+
+    按 core §2.5，对每个「同任务待提交」仓库执行与操作仓库相同的流水线：
+
+    1. 复核：当前仍检出同一任务分支、无进行中操作、非保护分支；不满足 → 跳过并记录原因
+    2. 敏感文件检查（规则同第 5 步）；命中 → **跳过该仓库**，记录文件，不询问、不阻断其他仓库
+    3. `git -C <sibling> add -A` → mojibake-fixer → format-keeper → `git -C <sibling> add -A`（按 core §2.6 继承该仓库根）
+    4. 提交信息：有 `--message` 时所有仓库共用；否则以该仓库暂存区调用 commit-draft 单独生成
+    5. `git -C <sibling> commit`；失败 → 记录原始错误，跳过该仓库后续步骤
+    6. 推送（除非 `--no-push`）；失败 → 记录原因，不 force、不 pull/rebase
+    7. 任一仓库失败不影响其他仓库；不自动回滚已产生的改动
+
+    - 按配置顺序逐个处理；不切换会话目录
+    - 「其他任务改动」仓库一律不处理
+
+14. **输出结果**：操作仓库、乱码修复情况、格式化状态、提交 hash 与 subject、推送结果（远端分支或“未推送”）；同任务兄弟仓库逐个列出「已提交 hash / 跳过（原因）」；其他分支改动只列仓库与分支，注明“已忽略”；下一步建议（`/gitflow:sync` 或 `/gitflow:merge`）。
 
 ## 停摆条件
 
 通用停摆条件见 core §2.3（进行中操作与 HEAD）、§2.4（远端）、§5（保护分支 / 命令失败 / 状态不符）。本命令不执行 core §2.2 的工作区干净检查。本命令特有：
 
 - 当前分支不是任务分支或指向保护分支
-- 多仓库遗漏检测命中且用户未选择继续
-- 命中疑似敏感文件且用户未明确确认
-- format-keeper / mojibake-fixer / commit-draft 未部署或执行失败
-- 提交信息为空，或 commit 被 hooks / 身份校验拦截
-- push 被拒绝、上游指向保护分支
+- 命中疑似敏感文件且用户未明确确认（仅操作仓库；兄弟仓库直接跳过，不阻断）
+- mojibake-fixer / format-keeper / commit-draft 未部署或执行失败（操作仓库）
+- 提交信息为空，或 commit 被 hooks / 身份校验拦截（操作仓库）
+- push 被拒绝、上游指向保护分支（操作仓库）
+
+同任务兄弟仓库的敏感文件、流水线或推送失败**不停摆**：跳过该仓库并在结果中记录原因，继续其他仓库。
 
 ## 输出示例
 
@@ -156,16 +183,16 @@ category: git
 - 远端: origin
 
 ### 执行
-1. 多仓库检测: pro-pcb 有 2 处未提交改动 → 用户选择继续 pro-ui
-2. git add -A: 3 个文件
-3. format-keeper: formatted（prettier:auto，2 个文件）
-4. mojibake-fixer: 无乱码
-5. git add -A: 2 个文件
-6. commit-draft: fix(ui): 修复背景色丢失 (PRO-159115)
-7. git commit: a1b2c3d
+1. 多仓库检测: pro-pcb 同任务待提交（同名分支）；pro-sch 其他任务改动（分支不同，已忽略）
+2. 操作仓库 pro-ui: git add -A → mojibake-fixer（无乱码）→ format-keeper（formatted，2 个文件）→ git add -A
+3. commit-draft: fix(ui): 修复背景色丢失 (PRO-159115)
+4. git commit: a1b2c3d
+5. 同任务仓库 pro-pcb: mojibake-fixer（无乱码）→ format-keeper（formatted，1 个文件）→ git commit: b2c3d4e
 
 ### 结果
 - 状态: 成功
-- 推送: origin/jiangshun/fix/4.1-PRO-159115
-- 下一步: 开发完成并自测后运行 /gitflow:merge；pro-pcb 的改动可用 /gitflow:commit --repo pro-pcb 处理
+- pro-ui: 已推送 origin/jiangshun/fix/4.1-PRO-159115
+- pro-pcb: 已推送 origin/jiangshun/fix/4.1-PRO-159115
+- pro-sch: 已忽略（当前分支 jiangshun/fix/4.1-PRO-160001，与本次任务无关）
+- 下一步: 开发完成并自测后运行 /gitflow:merge
 ```

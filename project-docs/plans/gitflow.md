@@ -314,29 +314,36 @@ heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
 
 ## 合并链路
 源分支：{{source_branch}}
+
 目标分支：{{target_branch}}
+
 本次合并为：{{merge_type}}（当前环境 / 链式同步 / 用户指定）
 
 ## 自测情况
 - [ ] 本地验证通过
 - [ ] 单元测试通过（如有）
 
-## 审核人
 /assign_reviewer {{reviewers}}
 ```
+
+> `{{ticket}}` 有链接时写成 Markdown 链接 `[单号 标题](链接)`，提交后可直接点击。`{{merge_type}}` 填实际类型，括号内的候选说明只用于提示、写入时一并替换。`{{reviewers}}` 为空时删除整条 `/assign_reviewer` 行。不要在指令前加「审核人」标题：GitLab 提交后会执行该指令并移除指令行，空标题会留在描述里。
 
 **审核人指定**：
 
 | 来源 | 方式 | 适用 |
 |------|------|------|
-| 仓库级默认 | `.gitlab/CODEOWNERS` 按目录自动分配 | 所有 MR 的兜底 |
-| 调用时指定 | `/git-merge --reviewer @zhangsan` | 本次合并需要特定人看 |
+| 命令行 | `--reviewer @name`（可重复）/ `--no-reviewer` | 本次合并临时指定或强制留空 |
+| 仓库级配置 | `repos.<name>.reviewers` | 固定的仓库负责人（推荐） |
+| 全局回退 | `mr.reviewers` | 多仓库共用同一审核人 |
+| CODEOWNERS | `.gitlab/CODEOWNERS` 按目录自动分配 | 未配置审核人时的兜底 |
 
-用户没指定时，AI 不主动 @ 具体人，只依赖 CODEOWNERS 或留空。
+解析顺序：命令行 → 仓库级 → 全局 → 空。未配置时不弹确认、不阻断 MR，AI 不主动猜测或 @ 人。`/gitflow:init` 对字段缺失的仓库，会从默认环境分支最近 10 条 merge 提交推断第一名并静默写入；推断结果在最终摘要中列出，可手工修正。
 
 ### 冲突处理
 
 **AI 不解决冲突，只做预检和报告。**
+
+> v0.4.3 更新：本节的 merge 预检仍不解决冲突；`/gitflow:sync` 另提供受限、需用户确认的冲突解决（core §5.5），默认仍是停摆。
 
 预检结果分三种情况：
 
@@ -421,6 +428,8 @@ pro-pcb: jiangshun/fix/4.1-PRO-159115
 ### `~/.claude/gitflow.json`（唯一全局配置，v0.4 起）
 
 配置由 `/gitflow:init` 创建或增量更新；不创建项目/工作区配置，也没有多文件优先级。
+
+> v0.4.5：`/gitflow:init` 全程非交互——环境链漂移、未解析映射、`active`/`default_env` 修正都按推荐方案自动处理并写入摘要。环境名只接受 `X.Y` 版本号或 `dev`/`main` 等环境名，多段数字（如 `3.2.0918`）直接排除；未解析映射只有唯一候选时自动映射，否则留空并在摘要列出候选。
 
 ```json
 {
@@ -564,23 +573,27 @@ pro-pcb: jiangshun/fix/4.1-PRO-159115
 
 | 项 | 决策 |
 |----|------|
-| 指令命名 | 统一使用 `gitflow:` 命名空间：`/gitflow:init`、`/gitflow:start`、`/gitflow:sync`、`/gitflow:commit`、`/gitflow:merge`，避免与 Git 原生命令混淆 |
-| 环境同步 | **链式**：任务分支只合回所属环境；环境之间按 `chain` 顺序逐级 MR 提升（`4.1 → dev`） |
+| 指令命名 | 统一使用 `gitflow:` 命名空间：`/gitflow:init`、`/gitflow:start`、`/gitflow:sync`、`/gitflow:commit`、`/gitflow:merge`、`/gitflow:promote`，避免与 Git 原生命令混淆 |
+| 环境同步 | **链式**：任务分支只合回所属环境；环境之间按 `chain` 顺序逐级提升（`4.1 → dev`），提升用 `/gitflow:promote` 从目标环境新建分支并 cherry-pick |
 | 未指定环境 | 默认 `default_env`，即链式顶端（通常 `dev`） |
 | 异常处理 | AI 不能快速解决的异常一律**停摆询问**，不猜测、不重试、不绕过 |
 | 配置位置 | 唯一全局配置 `~/.claude/gitflow.json`：`/gitflow:init` 默认更新当前仓库，`--all` 扫描父目录下全部仓库；不创建项目/工作区配置，无多文件优先级；`claude-lab deploy` 不管理配置 |
-| 提交流水线 | `git add -A` → `format-keeper` → `mojibake-fixer` → `git add -A` → `commit-draft` → `git commit` → `git push`；v0.1 暂不含 TS 检查与单元测试 |
+| 提交流水线 | `git add -A` → `mojibake-fixer` → `format-keeper` → `git add -A` → `commit-draft` → `git commit` → `git push`；暂不含 TS 检查与单元测试 |
 | 格式化 | 独立为 `skills/format-keeper`，可单独运行，也被 `/gitflow:commit` 内嵌引用 |
 | 分支创建 | `git checkout --no-track -b`，避免任务分支跟踪环境分支导致 `git push` 误推/被拒 |
-| MR 范围 | v0.1 只创建“任务分支 → 所属环境”的 MR；环境链提升规划为 `/gitflow:promote`（P2） |
+| MR 范围 | `/gitflow:merge` 只创建“任务分支 → 所属环境”的 MR；环境链提升由 `/gitflow:promote` 完成（v0.5.0）：新建提升分支、cherry-pick 原提交后再创建 MR |
 | MR 通道 | 优先 `glab`；不可用时停摆并给出手动创建入口（分支已推送时 `git push -o merge_request.create` 是 no-op，不作兜底） |
-| 冲突 | 只预检不解决：sync 冲突停摆；merge 用 `git merge-tree --write-tree --name-only` 只读预检 |
+| 冲突 | sync 冲突默认停摆；用户明确选择且在 core §5.5 限额内时 AI 可尝试解决，确认后提交；merge 用 `git merge-tree --write-tree --name-only` 只读预检，不碰工作区 |
+
+> v0.4.6：提交流水线顺序调整为 `git add -A` → `mojibake-fixer` → `format-keeper` → `git add -A` → `commit-draft` → `git commit` → `git push`。先修乱码再格式化，避免乱码修复改写文本后破坏刚生成的格式。
+
+> v0.4.7：多仓库检测不再弹窗。其他仓库只在**当前检出分支与操作仓库同名**时视为同一任务，由 `/gitflow:commit` 自动按相同流水线提交；不同分支的改动一律忽略。sync / merge 只提示、不停摆。
 
 已落地模块：
 
 - [skills/format-keeper](../../skills/format-keeper/README.md) —— 纯格式化技能
-- [suites/gitflow](../../suites/gitflow/README.md) —— 5 个命令（`/gitflow:*`）+ `gitflow-core` 共享技能 + 配置参考
+- [suites/gitflow](../../suites/gitflow/README.md) —— 6 个命令（`/gitflow:*`）+ `gitflow-core` 共享技能 + 配置参考
 
-后续迭代：`/gitflow:promote`（链式环境提升）、TS/测试检查、glab 参数实测校准、多仓库配置实测。
+已落地 v0.5.0：`/gitflow:promote`（链式环境提升，cherry-pick + 自动受限冲突解决 + 多仓库 worktree）。后续迭代：TS/测试检查、glab 参数实测校准、多仓库配置实测、promote 在各合并方式下的实测。
 
 _本文档随实践演进持续更新。_
