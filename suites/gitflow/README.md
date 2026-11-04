@@ -1,6 +1,6 @@
 # gitflow
 
-> AI 执行 Git 环境分支工作流的套件：生成配置、创建任务分支、同步、提交、创建 MR、环境提升，正常流程自动跑，异常一律停摆交给人。
+> AI 执行 Git 环境分支工作流的套件：生成配置、创建任务分支、同步、提交、创建 MR、环境提升、清理历史分支，正常流程自动跑，异常一律停摆交给人。
 
 环境分支（`dev` / `4.1` / `3.2` / ...）长期存在、只通过 MR 合入；每个任务从所属环境拉出 `{user}/{feat|fix}/{version}-{ticket}` 任务分支，开发完成后合回该环境。`gitflow` 把这条链路上的重复操作交给 AI，把需要业务判断的异常留给人。
 
@@ -15,7 +15,8 @@
 | 命令 | `/gitflow:sync` | 把所属环境分支的最新改动合入当前任务分支（fetch → 比较 → merge）；冲突时可在限额内由 AI 尝试解决，确认后提交，否则停摆 |
 | 命令 | `/gitflow:commit` | `git add -A` → mojibake-fixer → format-keeper → `git add -A` → commit-draft → commit → push；其他仓库与当前分支同名时自动提交同一任务，不同分支的改动忽略 |
 | 命令 | `/gitflow:merge` | fetch 后校验推送状态 → `merge-tree` 冲突预检（注明快照）→ 按命令行/仓库配置/全局配置解析审核人 → 用 glab 创建合入所属环境的 MR |
-| 命令 | `/gitflow:promote` | 把已合入源环境的任务提升到更高环境：识别原 MR 涉及的提交（merge 提交 / 唯一 squash 提交 / `--commits` 显式范围）→ 从目标环境新建任务分支 → 逐一 cherry-pick（限额内自动解决冲突，无法解决则停摆）→ 推送并按 `/gitflow:merge` 创建 MR；`--repos` 逐仓库处理，兄弟仓库用临时 worktree |
+| 命令 | `/gitflow:promote` | 把任务分支的改动提升到更高环境，**不要求源分支已合入源环境**：以源任务分支相对目标环境的未合入提交作为 cherry-pick 清单（`--commits` 可覆盖）→ 从目标环境新建任务分支 → 逐一 cherry-pick（限额内自动解决冲突，无法解决则停摆）→ 推送并按 `/gitflow:merge` 创建 MR；`--repos` 逐仓库处理，兄弟仓库用临时 worktree |
+| 命令 | `/gitflow:clean` | 按用户名前缀扫描历史任务分支：最后提交早于 `--days`（默认 30 天）的本地/远端分支列成候选（含最后提交时间与摘要），**第一阶段只列不删**；用户明确回复“全部删除 / 保留 N / 只删 N / 只删本地或远端”后才删除，删除前复核 SHA，分支更新或消失则跳过；`--repo` / `--repos` 逐仓库扫描 |
 | 技能 | `gitflow-core` | 共享规则：配置、操作仓库、环境链、前置检查、多仓库检测、ONES 解析、分支命名、远端 URL 推导、安全边界 |
 | 文档 | `gitflow-config` | 配置参考（部署到 `~/.claude/docs/`，按需引用） |
 
@@ -97,7 +98,7 @@ claude-lab deploy gitflow          # 或 claude-lab deploy suites/gitflow
 
 部署后：
 
-- 6 个命令 → `~/.claude/commands/gitflow/*.md`（调用为 `/gitflow:init` 等）
+- 7 个命令 → `~/.claude/commands/gitflow/*.md`（调用为 `/gitflow:init` 等）
 - 共享技能 → `~/.claude/skills/gitflow-core/SKILL.md`
 - 配置参考 → `~/.claude/docs/gitflow-config.md`
 
@@ -127,6 +128,12 @@ heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
 /gitflow:promote dev --repos pro-pcb,pro-api
 /gitflow:promote dev --repos all --dry-run
 /gitflow:promote dev --commits 3a1b2c3..9f8e7d6
+
+/gitflow:clean
+/gitflow:clean --days 14
+/gitflow:clean --days 30 --repo pro-pcb
+/gitflow:clean --days 14 --repos pro-pcb,pro-api
+/gitflow:clean --repos all --local-only
 ```
 
 ### 链式模型
@@ -138,19 +145,29 @@ heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
 - 任务分支从**所属环境**拉出，只合回该环境
 - 未指定环境 → `default_env`（链式顶端，通常 `dev`）
 - `/gitflow:sync` 的方向是**环境分支 → 任务分支**：把所属环境的最新改动合入任务分支
-- 环境之间的提升用 `/gitflow:promote`：从目标环境新建任务分支 → cherry-pick 原提交 → 再走 `/gitflow:merge`；每次提升使用独立分支，不影响已合入的源环境
+- 环境之间的提升用 `/gitflow:promote`：从目标环境新建任务分支 → cherry-pick 原提交 → 再走 `/gitflow:merge`；每次提升使用独立分支，源环境 MR 未合并也可以直接提升，两侧合入互不阻塞
 
 ### 环境提升
 
-任务分支合入所属环境后，运行 `/gitflow:promote [环境]` 继续向更高环境提升：
+运行 `/gitflow:promote [环境]` 把当前任务分支的改动提升到更高环境，**不要求源环境 MR 已合并**：
 
 1. **确定源/目标**：源环境取自当前任务分支的 `{version}`；目标缺省为 `chain` 中源环境之后的第一个 `active` 环境，也可显式指定（跳过中间环境会警告）
-2. **识别提交**：在源环境分支上找到包含源分支 tip 的 merge 提交，取其 `^1..<源分支 tip>` 范围；squash 合并时按工单号找唯一提交；快进/rebase 等无法自动识别时要求 `--commits <base>..<head>` 或单个 `<sha>`
+2. **生成提交清单**：取源任务分支 tip（本地/远端较新者，分叉则停摆），用 `git rev-list --reverse --no-merges --right-only --cherry-pick <remote>/<目标环境分支>...<source-tip>` 得到“源分支上尚未进入目标环境”的提交；`--commits <base>..<head>` 或单个 `<sha>` 可覆盖。该规则不读取源环境分支的 merge/squash 状态——源环境 MR 未合并、已合并、squash、rebase、fast-forward 都适用
 3. **新建提升分支**：按 `branch_pattern` 把 `{version}` 换成目标环境，从 `<remote>/<目标环境分支>` 创建并 `--no-track`；源分支与目标分支都保持不动
 4. **逐一 cherry-pick**：从旧到新重放提交；冲突在 core §5.5 限额内自动解决并 `--continue`，超出限额或非冲突失败则停摆并保留现场
-5. **创建 MR**：推送提升分支后按 `/gitflow:merge` 的流程创建目标 MR，`merge_type` 记为“链式同步”或“用户指定”
+5. **创建 MR**：推送提升分支后按 `/gitflow:merge` 的流程创建目标 MR，`merge_type` 记为“链式同步”或“用户指定”；输出的 MR 链接单独一行，只给原始 URL
 
-已存在于目标环境的提交会跳过；`--dry-run` 只输出识别结果与分支计划。多仓库提升用 `--repos <a,b,c|all>` 显式列出，兄弟仓库在临时 worktree 中处理、不切换主工作区；不因为检出同名分支就自动提升。一个仓库失败不阻断其他仓库。
+已存在于目标环境或补丁等价的提交会跳过；清单为空视为该仓库没有可提升内容；`--dry-run` 只输出提交清单与分支计划。多仓库提升用 `--repos <a,b,c|all>` 显式列出，兄弟仓库在临时 worktree 中处理、不切换主工作区；不因为检出同名分支就自动提升。一个仓库失败不阻断其他仓库。
+
+### 历史分支清理
+
+`/gitflow:clean` 清理长期积累的任务分支，分两步，**先列后删**：
+
+1. **扫描列出**：只匹配规范化用户名前缀 `<user>/` 的本地/远端分支，分别检查两侧 tip 的最后提交时间；早于 `--days`（默认 30 天）的列为候选，展示仓库、分支、位置、最后提交时间与摘要。当前分支、保护分支、任何 worktree 检出中的分支不进入候选。
+2. **等待明确指令**：第一阶段不删除任何分支；用户回复“全部删除”“保留 2”“只删 1、3”“只删本地/远端”等明确指令后才进入删除。
+3. **删除前复核**：重新 fetch 并比对 SHA；分支在列举后更新或消失则跳过；单个分支删除失败只记录，不影响其他分支。
+
+`--days 14` 可缩短到两周；`--repo` / `--repos` 支持逐仓库扫描，`--local-only` / `--remote-only` 限定范围。本命令**不检查 GitLab MR 状态**，删除前请自行确认；远端分支删除后不可恢复。
 
 ### 审核人
 
@@ -165,6 +182,7 @@ heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
 - 关联工单有链接时写成可点击的 `[单号 标题](链接)`，不再把标题和链接拆成两行纯文本
 - 合并链路每行之间留空行，避免 GitLab 把源分支/目标分支/合并类型渲染成同一段
 - `/assign_reviewer` 直接放在描述末尾，不加「审核人」标题——它是提交后即执行的 quick action，标题会只剩空章节；审核人为空时整行省略
+- 命令输出中的 MR 链接**单独一行、只给原始 URL**，不拼接中文、全角括号或“已创建”等说明——浏览器会把紧邻字符并入链接，导致打不开
 
 ### 冲突处理
 
@@ -199,8 +217,8 @@ git add -A → mojibake-fixer → format-keeper → git add -A
    - 其他仓库在**不同分支**上的改动 → 一律忽略，不提示确认、不提交、不切换
    - 同名分支未检出（仅存在分支引用）或处于 detached/merge 等状态 → 不自动处理，记录在结果中
    - 显式 `--repo <name>` → 只处理指定仓库，不自动提交兄弟仓库
-3. **`--repo <name>`**：显式操作配置中的某个兄弟仓库（内部用 `git -C`），不切换目录；五个执行命令都支持。commit 的内嵌技能（format-keeper / mojibake-fixer / commit-draft）按 core §2.6 继承操作仓库上下文，不会作用到会话当前仓库。
-4. **`--repos <a,b,c|all>`**：`/gitflow:start` 为兄弟仓库创建同名对齐任务分支（同环境、同单号），只创建不切换工作区；`/gitflow:promote` 依次提升指定仓库，兄弟仓库用临时 worktree 处理，不切换主工作区。兄弟仓库工作区不干净只提醒，不阻断。
+3. **`--repo <name>`**：显式操作配置中的某个兄弟仓库（内部用 `git -C`），不切换目录；六个执行命令都支持。commit 的内嵌技能（format-keeper / mojibake-fixer / commit-draft）按 core §2.6 继承操作仓库上下文，不会作用到会话当前仓库。
+4. **`--repos <a,b,c|all>`**：`/gitflow:start` 为兄弟仓库创建同名对齐任务分支（同环境、同单号），只创建不切换工作区；`/gitflow:promote` 依次提升指定仓库，兄弟仓库用临时 worktree 处理，不切换主工作区；`/gitflow:clean` 追加扫描指定仓库的历史分支。兄弟仓库工作区不干净只提醒，不阻断。
 
 多仓库的改动靠工单号关联：各仓库分支名包含同一单号，MR 描述中引用同一工单。
 
@@ -210,8 +228,9 @@ git add -A → mojibake-fixer → format-keeper → git add -A
 
 - **冲突处理有明确边界**：`/gitflow:sync` 冲突由用户选择，限额内解决后确认才提交；`/gitflow:promote` 在同样限额内自动解决 cherry-pick 冲突并继续，超出限额即停摆并保留现场；`/gitflow:merge` 只做 `merge-tree` 预检，不碰工作区
 - **不直接提交保护分支**：环境分支、`main`/`master`、配置的 `protected` 一律拒绝；`/gitflow:promote` 只操作新建的提升分支
-- **不执行破坏性操作**：`reset --hard`、`clean`、`rebase`、`force push`、`--amend`、`cherry-pick --abort/--skip` 均需用户明确要求（v0.5 不提供）
-- **不猜测异常**：配置缺失、工单/环境/类型不确定、提交范围无法识别、glab 不可用、状态与预期不符 → 停摆询问；例外是 `/gitflow:init`，按推荐方案自动处理并在摘要告知
+- **不执行破坏性操作**：`reset --hard`、`clean`、`rebase`、`force push`、`--amend`、`cherry-pick --abort/--skip` 均需用户明确要求（当前版本不提供）；分支删除只由 `/gitflow:clean` 在用户明确指令后执行，且只删除已列出的候选
+- **分支清理先列后删**：`/gitflow:clean` 第一阶段不删除任何分支；不检查 MR 状态，不删除清单外分支、保护分支、当前分支或检出中的分支；删除前复核 SHA，分支更新或消失即跳过
+- **不猜测异常**：配置缺失、工单/环境/类型不确定、`--commits` 非法或提交清单为空、glab 不可用、状态与预期不符 → 停摆询问；例外是 `/gitflow:init`，按推荐方案自动处理并在摘要告知
 - **不隐式操作其他仓库（commit 同任务除外）**：跨仓库写操作默认必须显式 `--repo`/`--repos`；`/gitflow:promote` 尤其不依据同名分支自动提升兄弟仓库。唯一例外是 `/gitflow:commit` 缺省模式下，对**当前检出分支与操作仓库完全相同**且存在未提交改动的兄弟仓库自动执行同一提交流水线——这是用户明确要求的“同名分支=同一任务”规则。不同分支、未检出同名分支或状态不安全的仓库一律不处理，也不切换工作区
 
 ## 相关

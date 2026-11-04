@@ -1,11 +1,11 @@
 ---
 name: gitflow-core
-description: gitflow 套件的共享规则：唯一全局配置的读取与校验、操作仓库解析、环境链、工作区前置检查、多仓库改动检测（同名分支自动提交）、内嵌技能上下文、ONES 工单解析、分支命名与反解、环境提升的提交识别与受限 cherry-pick 冲突解决、远端 URL 推导与 Git 安全边界。执行 /gitflow:start、/gitflow:sync、/gitflow:commit、/gitflow:merge、/gitflow:promote 前必须先读取本技能；/gitflow:init 复用本文件的配置校验规则，并在首次初始化时自动探测环境链（全流程非交互）。单个命令只描述自身流程，通用规则以本文件为准。
-version: 0.5.0
+description: gitflow 套件的共享规则：唯一全局配置的读取与校验、操作仓库解析、环境链、工作区前置检查、多仓库改动检测（同名分支自动提交）、内嵌技能上下文、ONES 工单解析、分支命名与反解、环境提升的提交识别（源任务分支相对目标环境的未合入提交，不依赖源环境合并状态）与受限 cherry-pick 冲突解决、历史任务分支清理（先列后删、删除前复核）、远端 URL 推导与 Git 安全边界。执行 /gitflow:start、/gitflow:sync、/gitflow:commit、/gitflow:merge、/gitflow:promote、/gitflow:clean 前必须先读取本技能；/gitflow:init 复用本文件的配置校验规则，并在首次初始化时自动探测环境链（全流程非交互）。单个命令只描述自身流程，通用规则以本文件为准。
+version: 0.6.0
 ---
 # gitflow-core
 
-gitflow 套件的**单一规则来源**。五个执行命令执行前先读取本文件并遵循；命令文档只写该命令独有的步骤。`/gitflow:init` 负责在配置缺失时生成配置，只复用 §1.2 / §1.3 的字段与校验规则。
+gitflow 套件的**单一规则来源**。六个执行命令执行前先读取本文件并遵循；命令文档只写该命令独有的步骤。`/gitflow:init` 负责在配置缺失时生成配置，只复用 §1.2 / §1.3 的字段与校验规则。
 
 ## 1. 配置
 
@@ -114,7 +114,7 @@ gitflow 只有一份配置：`~/.claude/gitflow.json`。
 
 ### 2.2 工作区
 
-适用：`/gitflow:start`、`/gitflow:sync`、`/gitflow:merge`、`/gitflow:promote`。`/gitflow:commit` **不执行**本节检查——它的职责就是提交当前工作区改动。
+适用：`/gitflow:start`、`/gitflow:sync`、`/gitflow:merge`、`/gitflow:promote`。`/gitflow:commit` 与 `/gitflow:clean` **不执行**本节检查——前者负责提交当前工作区改动；后者只读取分支引用并在用户明确指令后删除引用，不修改工作区。
 
 `/gitflow:promote` 对操作仓库的主工作区执行本节检查；`--repos` 追加的兄弟仓库使用系统临时目录中的独立 worktree，**不要求兄弟仓库主工作区干净**，也不会切换它。临时 worktree 本身必须是新建的干净目录。
 
@@ -154,6 +154,7 @@ git -C <root> symbolic-ref -q --short HEAD || echo DETACHED
 
 - 任一进行中状态或 detached HEAD → **停摆**，报告当前状态，让用户先处理
 - `/gitflow:promote` 的兄弟仓库虽然使用临时 worktree，也不得在仓库仍处于 merge/rebase/cherry-pick/revert 时创建新 worktree：这些状态共享仓库引用，先跳过该仓库并记录原因
+- `/gitflow:clean` **不执行**本节检查：它不切换、不修改工作区；当前分支与所有 worktree 检出的分支由 `git worktree list --porcelain` 排除，不允许删除
 
 ### 2.4 远端
 
@@ -212,7 +213,7 @@ git -C <root> ls-remote --exit-code --heads <remote> <branch>
 **`/gitflow:promote` 的处理**：
 
 - 不套用本节的自动检测：它只按 `--repo` / `--repos` 显式处理仓库，操作仓库始终处理；未列出的兄弟仓库不会因为检出同名分支而被自动提升
-- `--repos all` 才展开配置中当前工作区可用、存在源任务分支的兄弟仓库；是否已合入、能否识别提交由命令逐仓库判断，不满足的跳过并列出原因
+- `--repos all` 才展开配置中当前工作区可用、存在源任务分支的兄弟仓库；是否有可提升提交由命令逐仓库生成提交清单判断，不满足的跳过并列出原因
 - 兄弟仓库通过临时 worktree 操作，不切换、不 stash、不修改其主工作区
 
 ### 2.5.1 任务跨仓库时的分支准备
@@ -276,6 +277,7 @@ git -C <root> ls-remote --exit-code --heads <remote> <branch>
 - 显式 `[环境]` 必须属于 `active`、在 `chain` 中高于源环境；跳过中间环境时输出警告，`merge_type` 记为“用户指定”
 - 缺省目标为 `chain` 中源环境之后的第一个 `active` 环境；不存在 → 已在链式顶端，停摆
 - 目标环境与源环境相同或更低 → 停摆
+- 提交清单由源任务分支与目标环境的对称差计算（`rev-list --right-only --cherry-pick <remote>/<目标环境分支>...<source-tip>`），**不读取源环境分支的 merge/squash 状态**；源环境 MR 是否已合并不影响提升，两侧合入互不阻塞
 
 > `envs` 是“环境名 → 完整远端分支名”的显式映射，不要求各仓库同构。同一环境在不同仓库可指向不同分支名（如 `4.1 → pro-api/0.3`），配置即可覆盖。
 
@@ -365,7 +367,7 @@ git -C <root> rev-parse --abbrev-ref --symbolic-full-name '@{u}'
 ### 5.2 允许自动执行
 
 - `git fetch --prune`
-- `git status` / `log` / `diff` / `rev-list` / `merge-base` / `ls-remote` / `rev-parse` / `cherry`
+- `git status` / `log` / `diff` / `rev-list` / `merge-base` / `ls-remote` / `rev-parse` / `cherry` / `for-each-ref` / `worktree list`
 - `git checkout --no-track -b`（仅操作仓库；`/gitflow:promote` 也用于主工作区的新提升分支）
 - `git branch --no-track <branch> <remote>/<env-branch>`（仅 `/gitflow:start --repos` 为兄弟仓库创建对齐分支，或 `/gitflow:promote` 为兄弟仓库创建提升分支；**不切换**兄弟仓库主工作区）
 - `git worktree add <dir> <branch>` / `git worktree remove <dir>`（仅 `/gitflow:promote` 的兄弟仓库；`remove` 不加 `--force`）
@@ -385,14 +387,14 @@ git -C <root> rev-parse --abbrev-ref --symbolic-full-name '@{u}'
 - `git push --force` / `--force-with-lease`
 - `git reset --hard`、`git clean`、`git checkout -- .`
 - `git rebase`、`git commit --amend`
-- `git branch -D`、删除远端分支
+- `git branch -D`、删除远端分支（唯一例外：`/gitflow:clean` 在用户回复明确删除指令后，且只删除已列出的候选；不删除清单外分支、保护分支、当前分支或检出中的分支）
 - `git checkout` / `git switch` 其他仓库的工作分支（对齐分支用 `git branch` 创建，不切换）
 - `git stash pop/drop`（`push` 也仅在用户选择后）
 - `git merge --abort` / `git cherry-pick --abort` / `git cherry-pick --skip`（冲突时先报告，是否 abort/skip 由用户决定）
 - `--no-verify` 跳过 hooks
 - 超出 §5.5 范围或未经用户明确选择的冲突解决（`/gitflow:promote` 的限额内自动解决除外）
 - `git checkout --ours/--theirs`、`git merge -X ours/theirs` 整文件/整段选边
-- 未经 `/gitflow:promote` 提交清单确认的 cherry-pick
+- 未经 `/gitflow:promote` 第 6 步提交清单确认的 cherry-pick
 - `git worktree remove --force`
 
 ### 5.4 失败与异常
@@ -402,6 +404,7 @@ git -C <root> rev-parse --abbrev-ref --symbolic-full-name '@{u}'
 - merge 冲突（`/gitflow:sync`）→ 先列出冲突文件与范围；用户未选择 AI 解决、超出 §5.5 限额或无法可靠解决 → 停摆，工作区保持冲突状态，由用户决定解决或 `git merge --abort`
 - cherry-pick 冲突（`/gitflow:promote`）→ 在 §5.5 限额内自动解决并继续；超出限额、无法可靠解决或出现空提交 → 停摆，保留 cherry-pick 现场与 worktree，由用户决定解决、`git cherry-pick --continue`、`--skip` 或 `--abort`
 - 状态与预期不符（分支已被移动、远端分支消失、上游不一致、同名 MR 已存在等）→ 停摆询问
+- `/gitflow:clean` 的单个分支删除失败、分支在列举后更新或消失 → 记录原始错误并继续其他分支，不阻断、不回滚、不强制；删除前的 fetch 失败仍按本节停摆
 - **不猜测、不重试、不绕过**；AI 不能快速解决的异常一律停摆
 
 ### 5.5 受限冲突解决（/gitflow:sync、/gitflow:promote）
@@ -525,6 +528,10 @@ awk '/^<<<<<<< /{f=1} f{n++} /^>>>>>>> /{f=0} END{print n+0}' <file>
 ```
 
 `/gitflow:start --repos` 额外输出对齐仓库表（仓库、分支、是否新建）。停摆时必须说明“发生了什么、哪些动作没有执行、可选方案”，不把异常包装成成功。
+
+**MR 链接**：`/gitflow:merge`、`/gitflow:promote` 输出 MR 时，URL 必须**单独一行、只输出原始链接**。可以保留单独一行的 `MR:` 标签，但 URL 所在行不得拼接中文、全角括号、`（已创建）` 等说明文字——终端/浏览器会把紧邻字符并入链接，导致打不开。
+
+**分支清理**：`/gitflow:clean` 第一阶段只输出候选清单，以“等待指令”结束，明确写出“未删除任何分支”；第二阶段按用户明确指令删除后，逐项输出“已删除 / 跳过 / 失败”与原始原因。不得把候选清单包装成已清理。
 
 ## 7. 远端 URL 与手动 MR 入口
 

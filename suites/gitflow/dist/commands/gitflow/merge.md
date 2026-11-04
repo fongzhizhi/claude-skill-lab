@@ -155,7 +155,7 @@ category: git
 
     - **所有 `glab` 命令必须在 `<root>` 下执行**（或使用等价的 `-R` 指定仓库）；`--repo` 模式尤其注意，否则会操作会话当前仓库而不是操作仓库
 
-    - 已有打开的 MR → 报告链接，结束（不重复创建）
+    - 已有打开的 MR → 结束（不重复创建）；链接按第 15 步的规则单独输出原始 URL
     - 参数名以 `--help` 为准，不猜测；不支持 `--state opened` 时在结果中自行过滤已关闭/已合并的 MR
     - `glab auth status` 失败时，按第 14 步的“glab 不可用”分支停摆
 
@@ -199,6 +199,12 @@ category: git
 
 15. **输出结果**：MR 链接、源/目标分支、冲突预检快照与结果、审核人及来源、是否 Draft、是否删除源分支。若创建了 MR，提示合并后如需继续提升到更高环境，运行 `/gitflow:promote <目标环境>`；已在链式顶端则提示完成。
 
+    - **MR 链接单独一行输出原始 URL**，不加括号、中文标签或说明文字；不要把中文、全角括号紧贴 URL（终端或浏览器会将其并入链接，导致打开被截断）。例如：
+
+      ```text
+      https://gitlab.example.com/pro-ui/-/merge_requests/123
+      ```
+
 `--dry-run`：执行到第 13 步前停止，输出预检结果、审核人解析结果、标题、描述和手动创建入口，不调用 `glab`。
 
 > **首次接入校准**：先核对 `glab auth status`、`glab mr list --help`、`glab mr create --help` 的实际参数；`/gitflow:merge --dry-run` 只校准套件自身的标题/描述/入口，不调用 glab，不能替代 glab 参数校准。
@@ -215,7 +221,7 @@ category: git
 - MR 模板占位符未填充完整
 - glab 不可用/未认证、MR 创建失败
 - glab 因审核人不存在或无权限失败（不静默去掉审核人重试）
-- 已有 MR（报告链接，不重复创建）
+- 已有 MR（单独输出原始 URL，不重复创建）
 
 ## 输出示例
 
@@ -238,7 +244,8 @@ category: git
 
 ### 结果
 - 状态: 成功
-- MR: https://gitlab.example.com/pro-ui/-/merge_requests/123
+- MR:
+  https://gitlab.example.com/pro-ui/-/merge_requests/123
 - 审核人: @zhangsan、@lisi（来源: repos.pro-ui.reviewers）
 - 下一步: 合并 MR 后如需提升 4.1 → dev，运行 /gitflow:promote dev
 ```

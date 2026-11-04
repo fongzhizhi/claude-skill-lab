@@ -573,15 +573,15 @@ pro-pcb: jiangshun/fix/4.1-PRO-159115
 
 | 项 | 决策 |
 |----|------|
-| 指令命名 | 统一使用 `gitflow:` 命名空间：`/gitflow:init`、`/gitflow:start`、`/gitflow:sync`、`/gitflow:commit`、`/gitflow:merge`、`/gitflow:promote`，避免与 Git 原生命令混淆 |
-| 环境同步 | **链式**：任务分支只合回所属环境；环境之间按 `chain` 顺序逐级提升（`4.1 → dev`），提升用 `/gitflow:promote` 从目标环境新建分支并 cherry-pick |
+| 指令命名 | 统一使用 `gitflow:` 命名空间：`/gitflow:init`、`/gitflow:start`、`/gitflow:sync`、`/gitflow:commit`、`/gitflow:merge`、`/gitflow:promote`、`/gitflow:clean`，避免与 Git 原生命令混淆 |
+| 环境同步 | **链式**：任务分支只合回所属环境；环境之间按 `chain` 顺序逐级提升（`4.1 → dev`），提升用 `/gitflow:promote` 从目标环境新建分支并 cherry-pick，不要求源环境先合并 |
 | 未指定环境 | 默认 `default_env`，即链式顶端（通常 `dev`） |
 | 异常处理 | AI 不能快速解决的异常一律**停摆询问**，不猜测、不重试、不绕过 |
 | 配置位置 | 唯一全局配置 `~/.claude/gitflow.json`：`/gitflow:init` 默认更新当前仓库，`--all` 扫描父目录下全部仓库；不创建项目/工作区配置，无多文件优先级；`claude-lab deploy` 不管理配置 |
 | 提交流水线 | `git add -A` → `mojibake-fixer` → `format-keeper` → `git add -A` → `commit-draft` → `git commit` → `git push`；暂不含 TS 检查与单元测试 |
 | 格式化 | 独立为 `skills/format-keeper`，可单独运行，也被 `/gitflow:commit` 内嵌引用 |
 | 分支创建 | `git checkout --no-track -b`，避免任务分支跟踪环境分支导致 `git push` 误推/被拒 |
-| MR 范围 | `/gitflow:merge` 只创建“任务分支 → 所属环境”的 MR；环境链提升由 `/gitflow:promote` 完成（v0.5.0）：新建提升分支、cherry-pick 原提交后再创建 MR |
+| MR 范围 | `/gitflow:merge` 只创建“任务分支 → 所属环境”的 MR；环境链提升由 `/gitflow:promote` 完成（v0.5.0，v0.5.1 调整）：新建提升分支、cherry-pick 源任务分支相对目标环境的未合入提交后再创建 MR |
 | MR 通道 | 优先 `glab`；不可用时停摆并给出手动创建入口（分支已推送时 `git push -o merge_request.create` 是 no-op，不作兜底） |
 | 冲突 | sync 冲突默认停摆；用户明确选择且在 core §5.5 限额内时 AI 可尝试解决，确认后提交；merge 用 `git merge-tree --write-tree --name-only` 只读预检，不碰工作区 |
 
@@ -592,8 +592,8 @@ pro-pcb: jiangshun/fix/4.1-PRO-159115
 已落地模块：
 
 - [skills/format-keeper](../../skills/format-keeper/README.md) —— 纯格式化技能
-- [suites/gitflow](../../suites/gitflow/README.md) —— 6 个命令（`/gitflow:*`）+ `gitflow-core` 共享技能 + 配置参考
+- [suites/gitflow](../../suites/gitflow/README.md) —— 7 个命令（`/gitflow:*`）+ `gitflow-core` 共享技能 + 配置参考
 
-已落地 v0.5.0：`/gitflow:promote`（链式环境提升，cherry-pick + 自动受限冲突解决 + 多仓库 worktree）。后续迭代：TS/测试检查、glab 参数实测校准、多仓库配置实测、promote 在各合并方式下的实测。
+已落地 v0.5.0：`/gitflow:promote`（链式环境提升，cherry-pick + 自动受限冲突解决 + 多仓库 worktree）。v0.5.1 调整提交识别：直接取源任务分支相对目标环境的对称差，不等待源环境 MR 合并；MR 链接只输出原始 URL。v0.6.0 新增 `/gitflow:clean`：按用户名前缀与时间阈值列出历史任务分支，先列后删，用户明确指令后复核 SHA 再删除。后续迭代：TS/测试检查、glab 参数实测校准、多仓库配置实测、promote 在源环境未合并/squash/rebase 等场景下的实测、clean 的多 worktree 与指令解析实测。
 
 _本文档随实践演进持续更新。_

@@ -117,7 +117,7 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | **[ts-standards](rules/ts-standards/README.md)** | rules | 5 条 TS 必备规则（注释/风格/类型/错误处理/测试），路径作用域自动生效 |
 | **[ts-code-guide](docs/ts-code-guide/README.md)** | docs | TS 规范参考文档（注释/风格/类型/错误处理/测试 5 份指南）→ `~/.claude/docs/`，按需引用不占上下文 |
 | **[openspec](suites/openspec/README.md)** | suite | 6 个 `/opsx:*` 斜杠命令，规范驱动开发（需全局安装 `openspec` CLI） |
-| **[gitflow](suites/gitflow/README.md)** | suite | 环境分支 + 任务分支 + 多仓库协同 + 环境提升工作流：`/gitflow:init`、`start`、`sync`、`commit`、`merge`、`promote` 6 个命令 + `gitflow-core` 技能 + 配置参考 |
+| **[gitflow](suites/gitflow/README.md)** | suite | 环境分支 + 任务分支 + 多仓库协同 + 环境提升 + 历史分支清理工作流：`/gitflow:init`、`start`、`sync`、`commit`、`merge`、`promote`、`clean` 7 个命令 + `gitflow-core` 技能 + 配置参考 |
 | **[settings](settings/README.md)** | settings | 多模型切换（`_base.json` + profiles 合并）+ 全局 `CLAUDE.md` 部署（`deploy settings`） |
 | **[gitinit](gitinit/README.md)** | gitinit | `~/.claude` 本地 git 追踪：`claude-lab gitinit` 覆盖 `.gitignore`（同 switch 覆盖 settings.json），追踪 deploy/switch 的文件变化 |
 
@@ -148,7 +148,8 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | 想把环境最新改动合入任务分支 | `/gitflow:sync [环境]`（冲突可在限额内让 AI 尝试解决，确认后提交） |
 | 想提交并推送任务分支 | `/gitflow:commit`（默认 push，`--no-push` 只提交；其他仓库仅在同名分支时自动提交，不同分支改动忽略；`--repo` 只操作指定仓库） |
 | 想创建合入环境的 MR | `/gitflow:merge`（审核人取 `repos.<name>.reviewers` / `mr.reviewers`，可 `--reviewer` / `--no-reviewer`；支持 `--repo`、`--dry-run`） |
-| 想把已合入的改动提升到更高环境 | `/gitflow:promote [环境]`（从目标环境新建任务分支 → cherry-pick 原提交 → 创建 MR；冲突限额内自动解决；多仓库用 `--repos`，`--dry-run` 只预览） |
+| 想把任务分支的改动提升到更高环境（无需等待源环境合并） | `/gitflow:promote [环境]`（从目标环境新建任务分支 → cherry-pick 源分支相对目标环境的未合入提交 → 创建 MR；冲突限额内自动解决；多仓库用 `--repos`，`--dry-run` 只预览） |
+| 想清理历史任务分支 | `/gitflow:clean [--days 14]`（只列用户名前缀、最后提交早于阈值的本地/远端分支；先列清单不删除，用户明确回复“全部删除 / 保留 N / 只删 N”后才删；删除前复核 SHA） |
 | 想修复类型安全漏洞 | `/type-keeper`（可指定文件/目录） |
 | 想修复错误处理问题 | `/error-handling-keeper`（可指定文件/目录） |
 | 想补充/修复单元测试 | `/test-keeper`（可指定模块/目录） |
