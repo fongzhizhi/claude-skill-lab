@@ -1,1 +1,106 @@
-{}
+{
+  // ============================================
+  // 1. 编辑器核心体验
+  // ============================================
+  "editor.fontSize": 16,
+  "editor.fontFamily": "Consolas, 'Courier New', monospace",
+  "editor.lineHeight": 1.6,
+  "editor.fontLigatures": true,
+  "editor.cursorBlinking": "smooth",
+  "editor.cursorSmoothCaretAnimation": "on",
+  "editor.renderWhitespace": "all",
+  "editor.renderControlCharacters": true,
+  "editor.minimap.enabled": true,
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": "active",
+  "editor.smoothScrolling": true,
+  "editor.wordWrap": "on",
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": true,
+
+  // ============================================
+  // 2. 保存与格式化（核心！）
+  // ============================================
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": false,
+  "editor.formatOnType": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit",
+  },
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "files.trimTrailingWhitespace": true,
+
+  // ============================================
+  // 3. 默认格式化器（针对不同语言）
+  // ============================================
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[javascript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[javascriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[typescriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[jsonc]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[html]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[css]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[markdown]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[python]": { "editor.defaultFormatter": "ms-python.black-formatter" },
+  "[go]": { "editor.defaultFormatter": "golang.go" },
+
+  // ============================================
+  // 4. 工作区与文件管理
+  // ============================================
+  "workbench.startupEditor": "none",
+  "workbench.iconTheme": "vscode-icons",
+  "workbench.colorTheme": "Dark+",
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
+  "explorer.copyRelativePathSeparator": "/",
+  "window.title": "${dirty}${activeEditorShort}${separator}${rootName}",
+  "files.enableTrash": true,
+  "files.associations": {
+    "*.env.*": "env",
+    "*.md": "markdown",
+  },
+  "workbench.editorAssociations": {
+    "*.md": "default",
+  },
+
+  // ============================================
+  // 5. Git 集成
+  // ============================================
+  "git.enableSmartCommit": true,
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "git.openRepositoryInParentFolders": "never",
+  "git.mergeEditor": true,
+
+  // ============================================
+  // 6. 终端
+  // ============================================
+  "terminal.integrated.defaultProfile.windows": "Git Bash",
+  "terminal.integrated.mouseWheelScrollSensitivity": 3,
+  "terminal.integrated.copyOnSelection": true,
+  "terminal.integrated.rightClickBehavior": "copyPaste",
+
+  // ============================================
+  // 7. Claude Code 插件（你的核心需求）
+  // ============================================
+  "claudeCode.preferredLocation": "panel",
+  "claudeCode.useTerminal": true,
+  "claudeCode.disableLoginPrompt": true,
+  "claudeCode.initialPermissionMode": "acceptEdits",
+
+  // ============================================
+  // 8. 其他增强
+  // ============================================
+  "editor.stickyScroll.enabled": true,
+  "editor.linkedEditing": true,
+  "search.showLineNumbers": true,
+  "breadcrumbs.enabled": true,
+  "problems.showCurrentInStatus": true,
+  "security.workspace.trust.untrustedFiles": "open",
+  "explorer.confirmPasteNative": false,
+}
