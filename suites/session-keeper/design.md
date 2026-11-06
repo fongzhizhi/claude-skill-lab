@@ -17,8 +17,8 @@ Claude Code 会为每个会话自动生成标题（`ai-title`），显示在 `/r
 | 标题存储在会话 transcript 的 JSONL 记录中 | `~/.claude/projects/<项目>/<sessionId>.jsonl` 内的 `{"type":"ai-title"}` 与 `{"type":"custom-title"}` |
 | 列表标题优先取自定义标题 | 读取逻辑为 `customTitle ?? aiTitle`；`custom-title` 后写覆盖先写 |
 | 内置 `/rename` 就是追加一条 `custom-title` | 记录结构 `{type, customTitle, sessionId, uuid, timestamp}`，无需修改其他状态 |
-| `UserPromptSubmit` hook 原生支持设置标题 | hook 输出 schema 含 `hookSpecificOutput.sessionTitle`，并支持 `additionalContext` 注入本轮上下文 |
-| hook 能拿到当前标题 | hook 输入含 `session_title`；Bash 工具环境含 `CLAUDE_CODE_SESSION_ID` |
+| `UserPromptSubmit` hook 原生支持设置标题 | hook 输出 schema 含 `hookSpecificOutput.sessionTitle`（`Set the session title`），并支持 `additionalContext` 注入本轮上下文 |
+| hook 输入**可能不含**当前标题 | 2.1.221 的输入构造为「公共字段（`session_id` / `transcript_path` / `cwd` 等）+ `session_title: currentSessionTitle`」；该值只在会话已有自定义标题时存在，仅有 `ai-title` 的新会话里为空。标题必须有 `transcript_path` 兜底 |
 | 模型没有直接的「重命名」工具 | `rename_session` 是 SDK control 请求，不是模型可调用的工具 |
 
 结论：**模型负责语义判断，hook 负责确定性触发，脚本负责按官方数据结构落盘。**
@@ -82,11 +82,20 @@ hook 使用 exec 形式（`command: "node"` + `args`），避免 Windows 下的 
 
 套件最初的能力只有「标题维护」，但会话体验类能力（标题、状态、结束总结等）共享同一触发面（hook）和数据源（transcript），后续会持续并入。若按首个能力命名为 `session-title-keeper`，每加一个能力都要新建套件或改名；因此套件、技能与 hook 入口统一命名为 `session-keeper`，首个能力的规则作为技能的当前范围存在，后续能力在同一目录内扩展。
 
+#### 9. 标题从 `transcript_path` 兜底读取，且只读头尾
+
+最初版本假设 hook 输入一定带 `session_title`。实测（CLI 2.1.221）该字段取自 `currentSessionTitle`，只在会话已有自定义标题时有值；仅有 `ai-title` 的新会话里为空，导致 `effectiveTitle` 为空、hook 每次静默退出。修复：
+
+- `runHook()` 用 `input.transcript_path` 定位会话文件，再交给 `readTitleQuick()`：`ai-title` 读文件头（首条消息可能很长，头部窗口从 64KB 倍增到 4MB），`custom-title` 从文件尾按 128KB → 8MB 倍增查找（内置 `/rename` 与本脚本都追加在末尾）。
+- 不做全量扫描：35MB transcript 全量扫描实测 2.3 秒，头尾窗口约 100ms。
+- `set` 的幂等判断也改用快速读取，避免写标题时再付一次全量扫描成本。
+- 若尾部上限内找不到 `custom-title`（极端的超长尾随消息），退回 `ai-title`，最多显示旧标题，不会误写。
+
 ### 已知限制
 
 - **当前会话标题栏**需要下一轮 hook 回填才刷新；`/resume` 列表立即生效。
 - 依赖 `CLAUDE_CODE_SESSION_ID`；缺失时需显式传 `--session` / `--transcript`。
-- hook 每轮执行一次 Node 进程（约几十毫秒），只读 stdin 与缓存文件，不扫描 transcript。
+- hook 每轮执行一次 Node 进程；启动耗时受机器影响（Windows + 实时杀软实测约 1~3 秒/轮），脚本自身只读 stdin、缓存与 transcript 头尾，35MB 会话约 100ms。
 - 未部署 hook 时，技能仍可手动使用，但不会自动触发。
 - 卸载套件后若不移除 `_base.json` 的 hook 注册，每轮会因脚本缺失报错。
 

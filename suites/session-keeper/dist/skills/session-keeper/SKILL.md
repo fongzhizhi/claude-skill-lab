@@ -1,7 +1,7 @@
 ---
 name: session-keeper
 description: 维护当前会话标题。当对话明显切换到新话题、涉及或切换 ONES 单号、用户要求重命名会话，或收到 [session-keeper] 提醒时使用；按「简洁可检索 + ONES 单号前缀」的规则判断标题是否漂移并改写。
-version: 0.2.0
+version: 0.2.1
 ---
 # session-keeper
 
@@ -79,22 +79,24 @@ version: 0.2.0
 
 ## 操作步骤
 
+> 路径统一用 `os.homedir()` 展开，不要写 `$HOME`：部分环境（如安装了 Cadence）会把 `$HOME` 改到别处，导致脚本路径不存在。hook 提醒里已带当前标题，通常无需再执行 `get`。
+
 1. 读取当前标题（本轮上下文里已有标题时可跳过）：
 
    ```bash
-   node "$HOME/.claude/hooks/session-keeper.js" get
+   node "$(node -p "require('os').homedir()")/.claude/hooks/session-keeper.js" get
    ```
 
 2. 需要回忆最近话题（长会话、压缩后）时，看最近用户消息与最初需求：
 
    ```bash
-   node "$HOME/.claude/hooks/session-keeper.js" context --limit 8
+   node "$(node -p "require('os').homedir()")/.claude/hooks/session-keeper.js" context --limit 8
    ```
 
 3. 判定为漂移后写入：
 
    ```bash
-   node "$HOME/.claude/hooks/session-keeper.js" set "PRO-156328 · 切换自定义单参考点按钮置灰"
+   node "$(node -p "require('os').homedir()")/.claude/hooks/session-keeper.js" set "PRO-156328 · 切换自定义单参考点按钮置灰"
    ```
 
 4. 写入是幂等的：标题相同会输出「标题未变化」，不会重复追加记录。

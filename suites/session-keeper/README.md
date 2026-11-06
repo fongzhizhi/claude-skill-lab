@@ -51,13 +51,13 @@ month-log-summary 补写 AI 月总结
 
 ```bash
 # 读当前标题
-node "$HOME/.claude/hooks/session-keeper.js" get
+node "$(node -p "require('os').homedir()")/.claude/hooks/session-keeper.js" get
 
 # 看当前标题 + 最初需求 + 最近用户消息
-node "$HOME/.claude/hooks/session-keeper.js" context --limit 8
+node "$(node -p "require('os').homedir()")/.claude/hooks/session-keeper.js" context --limit 8
 
 # 直接改写
-node "$HOME/.claude/hooks/session-keeper.js" set "接入 pro-api 封装查询"
+node "$(node -p "require('os').homedir()")/.claude/hooks/session-keeper.js" set "接入 pro-api 封装查询"
 ```
 
 也可以直接对 Claude 说「把会话标题改成 X」「这个会话标题不对」，由技能按规则改写。
@@ -65,6 +65,9 @@ node "$HOME/.claude/hooks/session-keeper.js" set "接入 pro-api 封装查询"
 ## 已知限制
 
 - 标题栏的**当前会话**刷新依赖下一轮 hook 回填；`/resume` 列表在脚本写入后立即读取到新标题。
+- hook 输入的 `session_title` 只在会话已有自定义标题时有值（2.1.221），仅有 `ai-title` 时为空；脚本从 `transcript_path` 兜底读取，只读文件头（`ai-title`）与文件尾（`custom-title`），35MB 会话约 100ms；极端超长尾随消息下可能退回旧标题。
+- 每轮执行一次 Node 进程，启动耗时受机器影响（Windows + 实时杀软实测约 1~3 秒/轮，脚本自身读取只占约 0.1 秒）。
+- 命令行统一用 `os.homedir()` 展开路径；不要依赖 `$HOME`（部分环境会被第三方软件改写，如 Cadence）。
 - 需要 `CLAUDE_CODE_SESSION_ID` 环境变量（Claude Code 的 Bash 工具默认提供）；缺失时可用 `--session` / `--transcript` 指定。
 - 每轮注入的提醒约 60 个汉字；如不需要自动触发，移除 `_base.json` 中的 hook 注册即可退化为纯技能。
 - 卸载套件时请同步移除 `settings/profiles/_base.json` 中的 hook 注册，否则每轮会因找不到脚本而报错。

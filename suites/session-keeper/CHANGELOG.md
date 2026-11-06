@@ -2,6 +2,20 @@
 
 <!-- 记录 suites/session-keeper/ 的每次变更。 -->
 
+## v0.2.1（2026-11-06）
+
+### 修复
+
+- 修复 hook 在真实输入下静默退出的问题：UserPromptSubmit 的 `session_title` 仅在会话已有自定义标题时有值，改为从 `transcript_path` 兜底读取（`ai-title` 读文件头、`custom-title` 读文件尾，窗口倍增，避免全量扫描）
+- `set` 的幂等判断改用快速读取（35MB 会话从 2.3s 降到约 100ms）
+- SKILL.md / README 的命令路径改用 `os.homedir()` 展开，规避 `$HOME` 被第三方软件污染
+- 文档修正：明确 `session_title` 的条件性（仅已有自定义标题时存在）；输出 `sessionTitle` 已由 CLI schema 与运行逻辑确认支持
+
+### 验证
+
+- 35MB transcript：无 `session_title` 输入时 hook 可输出提醒；标题读取约 100ms
+- 假 HOME 下 pending 回填输出 `sessionTitle`，缓存文件被消费
+
 ## v0.2.0（2026-11-06）
 
 ### 变更

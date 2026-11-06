@@ -81,6 +81,8 @@ function resolveTranscript(opts) {
 
 function resolveSessionId(opts, transcript) {
   if (opts.session) return opts.session;
+  // 显式指定 transcript 时以文件名为准，避免被当前会话的环境变量带偏
+  if (opts.transcript && transcript) return path.basename(transcript, ".jsonl");
   if (process.env.CLAUDE_CODE_SESSION_ID) return process.env.CLAUDE_CODE_SESSION_ID;
   if (transcript) return path.basename(transcript, ".jsonl");
   return null;
@@ -191,6 +193,91 @@ function currentTitle(scan) {
   return { title: "", source: "none" };
 }
 
+/** 读取文件的一段（UTF-8）；不把整个文件读进内存。 */
+function readSlice(file, start, length) {
+  const fd = fs.openSync(file, "r");
+  try {
+    const buffer = Buffer.alloc(length);
+    const read = fs.readSync(fd, buffer, 0, length, start);
+    return buffer.toString("utf8", 0, read);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+/** 从一段文本中取最后一条指定类型的标题记录。窗口边界截断的行解析失败后忽略。 */
+function lastTitleRecord(text, type, key) {
+  let found = null;
+  for (const line of text.split("\n")) {
+    if (!line.includes(`"${type}"`) || !line.includes(`"${key}"`)) continue;
+    try {
+      const entry = JSON.parse(line);
+      if (entry.type === type && typeof entry[key] === "string") found = entry[key];
+    } catch {
+      // 可能是窗口截断的半行
+    }
+  }
+  return found;
+}
+
+const HEAD_START_BYTES = 64 * 1024;
+const HEAD_MAX_BYTES = 4 * 1024 * 1024;
+const TAIL_START_BYTES = 128 * 1024;
+const TAIL_MAX_BYTES = 8 * 1024 * 1024;
+
+/**
+ * hook 模式的快速标题读取：ai-title 在会话开头、custom-title 在末尾，
+ * 只读文件头尾并按窗口倍增，避免每轮扫描几十 MB。
+ * ai-title 可能在首条超长消息之后（实测可到 130KB+），因此头部也要倍增。
+ */
+function readTitleQuick(file) {
+  const stat = fs.statSync(file);
+
+  let headSize = Math.min(stat.size, HEAD_START_BYTES);
+  let headText = "";
+  let aiTitle = null;
+  while (true) {
+    headText = readSlice(file, 0, headSize);
+    aiTitle = lastTitleRecord(headText, "ai-title", "aiTitle");
+    if (aiTitle || headSize >= HEAD_MAX_BYTES || headSize >= stat.size) break;
+    headSize = Math.min(headSize * 2, HEAD_MAX_BYTES, stat.size);
+  }
+
+  // 小文件：头部窗口就是全文，custom-title 同样优先
+  if (stat.size <= headSize) {
+    return lastTitleRecord(headText, "custom-title", "customTitle") || aiTitle;
+  }
+
+  let tailSize = Math.min(stat.size, TAIL_START_BYTES);
+  while (true) {
+    const tail = readSlice(file, stat.size - tailSize, tailSize);
+    const customTitle = lastTitleRecord(tail, "custom-title", "customTitle");
+    if (customTitle) return customTitle;
+    if (tailSize >= TAIL_MAX_BYTES || tailSize >= stat.size) return aiTitle;
+    tailSize = Math.min(tailSize * 2, TAIL_MAX_BYTES, stat.size);
+  }
+}
+
+/** hook 输入的 transcript_path 优先；缺失或不可读时按 sessionId 在 projects/ 下查找。 */
+function resolveHookTranscript(input, sessionId) {
+  const raw = typeof input.transcript_path === "string" ? input.transcript_path.trim() : "";
+  if (raw) {
+    const candidates = [path.resolve(raw)];
+    // 手工测试可能传入 Git Bash 风格路径 /c/Users/...，转换为 C:/Users/...
+    if (process.platform === "win32" && /^\/[A-Za-z]\//.test(raw)) {
+      candidates.push(path.resolve(`${raw[1]}:${raw.slice(2)}`));
+    }
+    for (const candidate of candidates) {
+      try {
+        if (fs.statSync(candidate).isFile()) return candidate;
+      } catch {
+        // 继续尝试下一个候选
+      }
+    }
+  }
+  return resolveTranscript({ session: sessionId });
+}
+
 /** 写入 custom-title 记录（与内置 /rename 的数据结构一致）。 */
 function appendCustomTitle(file, sessionId, title) {
   const entry = {
@@ -281,7 +368,21 @@ async function runHook() {
   const sessionId = input.session_id;
   if (!sessionId) return;
 
-  const current = typeof input.session_title === "string" ? input.session_title.trim() : "";
+  // UserPromptSubmit 的 session_title 取自运行中会话的自定义标题，
+  // 仅有 ai-title 的新会话里为空；读不到时从 transcript_path 指向的会话文件兜底。
+  const runtimeTitle = typeof input.session_title === "string" ? input.session_title.trim() : "";
+  let current = runtimeTitle;
+  if (!current) {
+    const transcript = resolveHookTranscript(input, sessionId);
+    if (transcript) {
+      try {
+        current = readTitleQuick(transcript) || "";
+      } catch {
+        // transcript 读不到时按暂无标题处理
+      }
+    }
+  }
+
   const pending = readPendingTitle(sessionId);
   const effectiveTitle = pending || current;
 
@@ -290,8 +391,10 @@ async function runHook() {
 
   const output = { hookEventName: "UserPromptSubmit" };
 
-  // 把脚本写入的标题回填给运行中的会话，触发标题栏刷新
-  if (pending && pending !== current) {
+  // 把脚本写入的标题回填给运行中的会话，触发标题栏刷新。
+  // 注意不能和 current 比较：current 读自 transcript，set 已经写进去了，
+  // 但运行中会话的内存标题仍是旧值，必须靠 sessionTitle 回填一次。
+  if (pending && pending !== runtimeTitle) {
     output.sessionTitle = pending;
   }
 
@@ -371,8 +474,8 @@ async function cmdSet(opts) {
     return;
   }
 
-  const scan = await scanTranscript(transcript);
-  const previous = currentTitle(scan).title;
+  // 幂等判断只需当前标题，走快速读取（长会话下比全量扫描快一个数量级）
+  const previous = readTitleQuick(transcript) || "";
 
   if (previous === title) {
     console.log(`标题未变化: ${title}`);
