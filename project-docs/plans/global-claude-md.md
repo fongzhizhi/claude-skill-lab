@@ -2,7 +2,7 @@
 
 > 把 ~/.claude/CLAUDE.md (全局个人指令) 纳入 claude-skill-lab 仓库维护，部署通道走 deploy，不绑 switch。
 >
-> 关联：settings 模块、cli/lab.js、CLAUDE.md 工作台说明
+> 关联：settings 模块、lab/index.js、CLAUDE.md 工作台说明
 
 ## 一、背景与问题
 
@@ -26,9 +26,9 @@
 | :--- | :--- | :--- |
 | 1 | 顶层 manifest 已声明 CLAUDE.md 的映射: `"settings": { "files": { "CLAUDE.md": "${HOME}/.claude/CLAUDE.md", ... } }` | manifest.json |
 | 2 | `settings/CLAUDE.md` 占位文件已存在，但只有 7 行空壳注释 (2025-08 创建后从未填充) | settings/CLAUDE.md |
-| 3 | lab.js 从未消费顶层 settings.files ——CLI 只读套件的 manifest.mappings；单模块部署走内嵌 TYPES 常量 | lab.js:18、lab.js:162 |
-| 4 | settings不在 TYPES (skills/agents/commands/rules/hooks/workflows/docs) 中，因此完全不在 findModules 的扫描范围里——list / status / deploy / remove 都看不见它 | lab.js:132-171 |
-| 5 | settings 现有两条特殊路径：switch (合并 profile -> 写 ~/.claude/settings.json，含 ANTHROPIC_AUTH_TOKEN 占位符保护) 与 gitinit (覆盖部署 .gitignore 模板)；都不碰 CLAUDE.md | lab.js:747-883 |
+| 3 | lab/index.js 从未消费顶层 settings.files ——CLI 只读套件的 manifest.mappings；单模块部署走内嵌 TYPES 常量 | lab/index.js:18、lab/index.js:162 |
+| 4 | settings不在 TYPES (skills/agents/commands/rules/hooks/workflows/docs) 中，因此完全不在 findModules 的扫描范围里——list / status / deploy / remove 都看不见它 | lab/index.js:132-171 |
+| 5 | settings 现有两条特殊路径：switch (合并 profile -> 写 ~/.claude/settings.json，含 ANTHROPIC_AUTH_TOKEN 占位符保护) 与 gitinit (覆盖部署 .gitignore 模板)；都不碰 CLAUDE.md | lab/index.js:747-883 |
 | 6 | 本地 ~/.claude/CLAUDE.md (10.7KB) 为手写真身，与仓库无任何关联 | C:\Users\win10\.claude\CLAUDE.md |
 
 结论：架构骨架 (manifest 映射 + settings/CLAUDE.md 占位) 当初就是按"放 settings 目录、部署到 ~/.claude/CLAUDE.md"设计的，只是内容与部署通道从未实现。本次是补全，不是新设计。
@@ -38,7 +38,7 @@
 | 方案 | 说明 | 判断 |
 | :--- | :--- | :--- |
 | A. settings/维护 + switch 带过去 | 每次 claude-lab switch 时顺带复制 CLAUDE.md | ❌ switch 的职责是切模型 (合并 profile -> 写 settings.json)，CLAUDE.md 的变更节奏是"环境知识变化"，与切模型无关；每次切模型都覆盖它语义错位，还给 switch 增加职责 |
-| B. 独立新目录 (新模块类型) | 如 claude-md/ 或新增类型映射到根级 | ❌ 为根级一个文件新建类型，lab.js 内嵌 TYPES、顶层 manifest、status/remove 对称性全要动；且方案骨架里的 settings/CLAUDE.md 占位与 manifest 映射会变成自相矛盾的遗留 |
+| B. 独立新目录 (新模块类型) | 如 claude-md/ 或新增类型映射到根级 | ❌ 为根级一个文件新建类型，lab/index.js 内嵌 TYPES、顶层 manifest、status/remove 对称性全要动；且方案骨架里的 settings/CLAUDE.md 占位与 manifest 映射会变成自相矛盾的遗留 |
 | C. settings/维护 + deploy 带过去 (选型) | settings/CLAUDE.md 为唯一事实来源，新增 claude-lab deploy settings 复制到 ~/.claude/CLAUDE.md | ✅ 完成既有设计骨架；与 settings.json 同属 ~/.claude 根级"个人配置"，语义同一家族；改动量最小 |
 
 选 C 的补充理由：
@@ -61,7 +61,7 @@ gitinit/.gitignore.template — claude-lab gitinit ──> ~/.claude/.gitignore 
 
 ### 4.2 manifest 顶层 settings.files 的定位
 
-激活后它是 settings 模块部署逻辑的事实来源 (与 lab.js 内嵌逻辑保持一致)：
+激活后它是 settings 模块部署逻辑的事实来源 (与 lab/index.js 内嵌逻辑保持一致)：
 
 | 键 | 处理 | v1 状态 |
 | :--- | :--- | :--- |
@@ -92,7 +92,7 @@ gitinit/.gitignore.template — claude-lab gitinit ──> ~/.claude/.gitignore 
 ## 五、实施步骤
 
 1. 内容收编：按 4.4 拆分 ~/.claude/CLAUDE.md -> 全局部分写入 settings/CLAUDE.md，仓库部分合并进项目级 CLAUDE.md (去重)
-2. CLI 实现：lab.js 增加 settings 的 deploy (静态复制) + status 一致性检查 + list 展示；settings.json 键永久跳过
+2. CLI 实现：lab/index.js 增加 settings 的 deploy (静态复制) + status 一致性检查 + list 展示；settings.json 键永久跳过
 3. 文档同步：settings/README.md、项目级 CLAUDE.md 的 settings 模块章节、顶层 README 状态章节
 4. 验证：claude-lab deploy settings 后 diff 本地与仓库文件；claude-lab status 确认一致性报告正确；跑一次 switch 确认 settings.json 不受影响
 5. 回归：deploy --all、gitinit、switch --ephemeral 各跑一遍，确认三条通道互不干扰

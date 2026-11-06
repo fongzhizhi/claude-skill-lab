@@ -258,6 +258,37 @@ function readTitleQuick(file) {
   }
 }
 
+/** 从一段文本中取第一条可读的用户消息；用于 ai-title 缺失时的兜底标题。 */
+function firstUserText(text) {
+  for (const line of text.split("\n")) {
+    if (!line.includes('"type":"user"')) continue;
+    try {
+      const value = extractUserText(JSON.parse(line));
+      if (value) return value;
+    } catch {
+      // 窗口截断的半行
+    }
+  }
+  return null;
+}
+
+/**
+ * 首条用户消息兜底：部分兼容端点（如 DeepSeek 的 Anthropic 兼容 API）不生成 ai-title，
+ * 此时若仍静默，hook 永远拿不到标题、也就永远不会提醒改名。
+ * 只读文件头部窗口，成本与 readTitleQuick 同级。
+ */
+function readFirstUserPrompt(file) {
+  const stat = fs.statSync(file);
+  let size = Math.min(stat.size, HEAD_START_BYTES);
+  while (true) {
+    const text = readSlice(file, 0, size);
+    const prompt = firstUserText(text);
+    if (prompt) return prompt;
+    if (size >= stat.size || size >= HEAD_MAX_BYTES) return null;
+    size = Math.min(size * 2, HEAD_MAX_BYTES, stat.size);
+  }
+}
+
 /** hook 输入的 transcript_path 优先；缺失或不可读时按 sessionId 在 projects/ 下查找。 */
 function resolveHookTranscript(input, sessionId) {
   const raw = typeof input.transcript_path === "string" ? input.transcript_path.trim() : "";
@@ -343,10 +374,15 @@ function detectOnesIds(text) {
 
 function buildReminder(title, onesIds) {
   const parts = [
-    `[session-keeper] 当前会话标题「${title}」。`,
-    "若本轮话题已明显漂移（或 ONES 单发生变化），按 skill session-keeper 的规则改写标题；",
-    "未漂移则完全忽略本提示，不要向用户提及标题。",
+    `[session-keeper] 当前标题「${title}」。`,
+    "每轮自检：一句话概括本轮用户在做什么，与标题不是同一件事（新任务/新模块/新问题域/对象或目标变了都算，拿不准也算变了）就按 skill session-keeper 规则直接以最新话题为准改写标题；",
+    `命令：node "${__filename}" set "<新标题>"。`,
   ];
+  // 只在会话涉及 ONES 时追加前缀约束，避免无单会话每轮多背一句话
+  if (/^[A-Za-z][A-Za-z0-9]*-\d+\s*·\s*/.test(title) || onesIds.length > 0) {
+    parts.push("ONES 前缀：主话题仍属同一张单时，正文可变、前缀保留；换单则换前缀。");
+  }
+  parts.push("仍是同一件事则完全忽略本提示，不要向用户提及标题。");
   if (onesIds.length > 0) {
     parts.push(` 本轮出现 ONES 单号：${onesIds.join("、")}。`);
   }
@@ -377,6 +413,11 @@ async function runHook() {
     if (transcript) {
       try {
         current = readTitleQuick(transcript) || "";
+        if (!current) {
+          // 兼容端点可能不生成 ai-title：用首条用户消息兜底，避免 hook 永久静默
+          const firstPrompt = readFirstUserPrompt(transcript);
+          if (firstPrompt) current = firstPrompt.slice(0, 40);
+        }
       } catch {
         // transcript 读不到时按暂无标题处理
       }

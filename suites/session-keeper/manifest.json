@@ -1,7 +1,7 @@
 {
   "name": "session-keeper",
-  "version": "0.2.1",
-  "description": "会话体验守护套件：当前提供标题自动维护（UserPromptSubmit hook 每轮提醒 + 技能判断漂移并改写，支持 ONES 单号前缀），后续会话状态等能力可并入同一套件。",
+  "version": "0.2.3",
+  "description": "会话体验守护套件：当前提供标题自动维护（UserPromptSubmit hook 每轮提醒 + 技能判断话题变化并以最新话题改写，支持 ONES 单号前缀），后续会话状态等能力可并入同一套件。",
   "type": "suite",
   "mappings": [
     {

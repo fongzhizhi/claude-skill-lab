@@ -27,7 +27,7 @@
 
 ## 设计原则
 
-- **确定性脚本**：逻辑内聚在 `lab.js` 的 `cmdGitInit()`（单文件、零依赖 CLI），不依赖 AI 对话执行。
+- **确定性脚本**：逻辑内聚在 `lab/index.js` 的 `cmdGitInit()`（单文件、零依赖 CLI），不依赖 AI 对话执行。
 - **git init 幂等**：`.git` 已存在则跳过。`git init` 本身非交互且安全（已有仓库时只是 reinit 不破坏），用户口述的 `git init -y` 无此参数，直接调用 `git init` 即满足"已有就跳过"的意图。
 - **模板覆盖**：`.gitignore` 每次从模板覆盖写入，不保留本地手工改动——本地 `~/.claude/.gitignore` 是生成物。
 - **本地专用**：不配置远程、不 push。`settings.json` 含 API Key，但纯本地追踪不增加暴露面（能访问 `.git` 的进程必然也能直接读 `settings.json` 明文）；若未来配置远程推送，须先 `git rm --cached ~/.claude/settings.json` 再 push，避免密钥永久留在 git 历史（git 历史不可改写）。

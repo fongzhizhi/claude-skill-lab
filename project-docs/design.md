@@ -82,7 +82,9 @@
 ```
 claude-skill-lab/
 ├── README.md
-├── package.json                 部署入口（npm scripts / bin → cli/lab.js）
+├── package.json                 部署入口（npm scripts / bin → lab/index.js）
+├── lab/                         lab CLI 自身实现（零依赖单文件）
+│   └── index.js                 入口：list / status / deploy / remove / switch / gitinit
 ├── manifest.json                顶层映射表（类型 → 目标路径、部署规则）
 ├── docs/                        单模块：参考文档 → ~/.claude/docs/
 │   └── <name>/
@@ -167,6 +169,14 @@ claude-skill-lab/
 │       ├── manifest.json        套件内部部署清单（声明文件映射）
 │       └── dist/                ← 成品目录（可包含子目录）
 │           └── (任意结构，与目标部署位置对应)
+│
+├── clis/                        自研 CLI 工具（不参与 lab 部署，各自 npm run link）
+│   └── <name>/
+│       └── README.md
+│
+├── apps/                        自研桌面应用（不参与 lab 部署，各自独立构建）
+│   └── <name>/
+│       └── README.md
 │
 └── settings/                    配置类 → ~/.claude/ + VSCode
     ├── README.md                配置决策说明
@@ -348,7 +358,7 @@ settings/
 | `settings/settings.template.json` | 手动拷贝 | 仓库内 `settings/settings.json` | 不入仓，含真实 Key |
 | `settings/vscode/settings.json` | 暂未接入 | `{VSCodeSettings}` | 需另议解析与合并 |
 
-`deploy settings` 的部署白名单由 `cli/lab.js` 的 `SETTINGS_DEPLOY_FILES` 维护，与顶层 `manifest.json` 的 `settings.files` 保持一致：v1 仅激活 `CLAUDE.md`，`settings.json` 永久排除，`profiles/*` 与 `vscode/` 暂不激活。
+`deploy settings` 的部署白名单由 `lab/index.js` 的 `SETTINGS_DEPLOY_FILES` 维护，与顶层 `manifest.json` 的 `settings.files` 保持一致：v1 仅激活 `CLAUDE.md`，`settings.json` 永久排除，`profiles/*` 与 `vscode/` 暂不激活。
 
 ### 多模型切换机制（Profile Merge）
 
@@ -427,7 +437,7 @@ lab deploy suites/openspec    # 显式部署套件
 ### 执行约定
 
 - 推荐方式：仓库内 `npm run link` 注册全局命令 `claude-lab`，之后在**任意目录**执行（CLI 以自身脚本位置定位仓库，与当前目录无关）；上方命令总览中的 `lab xxx` 为 `claude-lab xxx` 的兼容别名
-- 也可在仓库内通过 `node cli/lab.js` 或 npm 脚本（`npm run deploy <name>` 等）调用
+- 也可在仓库内通过 `node lab/index.js` 或 npm 脚本（`npm run deploy <name>` 等）调用
 - 退出码：0 成功，1 参数错误，2 文件操作失败
 - 部署前自动创建目标父目录
 
@@ -556,7 +566,7 @@ lab deploy suites/openspec    # 显式部署套件
 
 ## 跨平台路径处理
 
-`manifest.json` 中使用模板变量，`lab.js` 运行时根据 `process.platform` 解析。
+`manifest.json` 中使用模板变量，`lab/index.js` 运行时根据 `process.platform` 解析。
 
 | 变量               | 解析规则                                     |
 | ------------------ | -------------------------------------------- |

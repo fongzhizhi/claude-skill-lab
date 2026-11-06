@@ -4,18 +4,19 @@
   "description": "Claude Code 扩展能力的个人研发工作台 —— 锻造 skill / agent / command / rule / hook / workflow，一键部署到本地",
   "license": "MIT",
   "bin": {
-    "claude-lab": "cli/lab.js",
-    "lab": "cli/lab.js"
+    "claude-lab": "lab/index.js",
+    "lab": "lab/index.js"
   },
   "scripts": {
     "link": "npm link",
     "unlink": "npm unlink -g",
-    "lab": "node cli/lab.js",
-    "list": "node cli/lab.js list",
-    "status": "node cli/lab.js status",
-    "deploy": "node cli/lab.js deploy",
-    "remove": "node cli/lab.js remove",
-    "switch": "node cli/lab.js switch"
+    "lab": "node lab/index.js",
+    "gitinit": "node lab/index.js gitinit",
+    "list": "node lab/index.js list",
+    "status": "node lab/index.js status",
+    "deploy": "node lab/index.js deploy",
+    "remove": "node lab/index.js remove",
+    "switch": "node lab/index.js switch"
   },
   "engines": {
     "node": ">=18"

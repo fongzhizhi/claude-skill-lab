@@ -25,13 +25,14 @@
         调整 dist/ 成品 ◀───── 反馈 · 迭代（skill-forge）─┘
 ```
 
-两种模块形态（`dist/` 均与 `~/.claude/` 相对路径一一对应，可直接 `cp -r <module>/dist/* ~/.claude/` 验证），另有独立 CLI 形态：
+两种模块形态（`dist/` 均与 `~/.claude/` 相对路径一一对应，可直接 `cp -r <module>/dist/* ~/.claude/` 验证），另有独立工具形态（不参与 lab 部署）：
 
-| 形态 | 说明 | 适用场景 |
-| --- | --- | --- |
-| **单模块** | 单一类型、`dist/` 全量镜像、零配置 | 一个技能、一个斜杠命令 |
-| **聚合套件** | 多文件、可混合类型、`manifest.json` 声明映射 | OpenSpec 工具集、工作流系统 |
-| **独立 CLI** | `clis/<name>/`，`npm run link:<name>` 注册全局命令（不走 lab deploy，改代码即时生效） | ones CLI（ONES 版 glab） |
+| 形态             | 说明                                                                                                    | 适用场景                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------- | --------------------------- |
+| **单模块**       | 单一类型、`dist/` 全量镜像、零配置                                                                      | 一个技能、一个斜杠命令      |
+| **聚合套件**     | 多文件、可混合类型、`manifest.json` 声明映射                                                            | OpenSpec 工具集、工作流系统 |
+| **独立 CLI**     | [`clis/<name>/`](clis/README.md)，`npm run link:<name>` 注册全局命令（不走 lab deploy，改代码即时生效） | ones CLI（ONES 版 glab）    |
+| **独立桌面应用** | [`apps/<name>/`](apps/README.md)，各自独立构建（如 Tauri），产物是安装包，lab CLI 不感知                | 会话状态看板                |
 
 > 目录结构、模块规范与部署细节见 [project-docs/design.md](project-docs/design.md)。
 
@@ -75,23 +76,23 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 
 ## 指令参考
 
-全局命令 `claude-lab`（`npm run link` 注册后任意目录可用，等价于 `node cli/lab.js`）：
+全局命令 `claude-lab`（`npm run link` 注册后任意目录可用，等价于 `node lab/index.js`）：
 
-| 命令 | 说明 |
-| --- | --- |
-| `claude-lab` | 显示帮助 |
-| `claude-lab list` | 列出所有可部署模块（含套件与 settings） |
-| `claude-lab status` | 显示本地部署状态（含 `settings/CLAUDE.md` 一致性） |
-| `claude-lab deploy <name>` | 部署（类型自动推断） |
-| `claude-lab deploy <type>/<name>` | 同名冲突时显式限定 |
-| `claude-lab deploy suites/<name>` | 部署聚合套件 |
-| `claude-lab deploy settings` | 部署全局 `~/.claude/CLAUDE.md`（`settings.json` 仍由 switch 管） |
-| `claude-lab deploy --all` | 一键部署所有模块（含 settings） |
-| `claude-lab remove <name>` | 卸载已部署模块（settings 不提供卸载） |
-| `claude-lab switch` | 列出可用 profiles |
-| `claude-lab switch <profile>` | 切换模型配置 |
-| `claude-lab switch <profile> --ephemeral` | 仅当前会话生效 |
-| `claude-lab gitinit` | 覆盖 `~/.claude/.gitignore`（来自 `gitinit/.gitignore.template`，同 switch 覆盖 settings.json） |
+| 命令                                      | 说明                                                                                            |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `claude-lab`                              | 显示帮助                                                                                        |
+| `claude-lab list`                         | 列出所有可部署模块（含套件与 settings）                                                         |
+| `claude-lab status`                       | 显示本地部署状态（含 `settings/CLAUDE.md` 一致性）                                              |
+| `claude-lab deploy <name>`                | 部署（类型自动推断）                                                                            |
+| `claude-lab deploy <type>/<name>`         | 同名冲突时显式限定                                                                              |
+| `claude-lab deploy suites/<name>`         | 部署聚合套件                                                                                    |
+| `claude-lab deploy settings`              | 部署全局 `~/.claude/CLAUDE.md`（`settings.json` 仍由 switch 管）                                |
+| `claude-lab deploy --all`                 | 一键部署所有模块（含 settings）                                                                 |
+| `claude-lab remove <name>`                | 卸载已部署模块（settings 不提供卸载）                                                           |
+| `claude-lab switch`                       | 列出可用 profiles                                                                               |
+| `claude-lab switch <profile>`             | 切换模型配置                                                                                    |
+| `claude-lab switch <profile> --ephemeral` | 仅当前会话生效                                                                                  |
+| `claude-lab gitinit`                      | 覆盖 `~/.claude/.gitignore`（来自 `gitinit/.gitignore.template`，同 switch 覆盖 settings.json） |
 
 仓库内 npm 脚本为同一 CLI 的薄封装：`npm run lab`（帮助）、`npm run list` / `status` / `deploy <name>` / `remove <name>` / `switch <profile>`。`npm run deploy --all` 无需 `--` 分隔符（CLI 从 `npm_config_all` 等环境变量恢复标志）。
 
@@ -99,42 +100,47 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 
 ### 🟢 已部署可用
 
-| 模块 | 类型 | 说明 |
-| --- | --- | --- |
-| **[skill-forge](skills/skill-forge/README.md)** | skill | 创建、维护、迭代所有模块（单模块 + 聚合套件） |
-| **[comment-keeper](skills/comment-keeper/README.md)** | skill | 按 TS 注释规范统一调整代码注释（核对/增删改/补录，必要时重构自解释） |
-| **[style-keeper](skills/style-keeper/README.md)** | skill | 按编码风格规范统一命名与常量：ESLint/Prettier 自动兜底，改名安全分级 |
-| **[type-keeper](skills/type-keeper/README.md)** | skill | 按类型安全规范修复类型漏洞：清 any / @ts-ignore / 非空断言，tsc 全绿门禁 |
-| **[error-handling-keeper](skills/error-handling-keeper/README.md)** | skill | 按错误处理规范修复存量代码：语义等价直接做，控制流改动列清单 |
-| **[test-keeper](skills/test-keeper/README.md)** | skill | 按测试规范补充与修复单元测试：无测试走方案，有测试审质量 |
-| **[live-debugger](skills/live-debugger/README.md)** | skill | 模拟人工 debugger 流程定位前端 bug：埋点 → 自动复现（Playwright MCP 优先）→ 收敛 → 修复清理 |
-| **[quick-start](skills/quick-start/README.md)** | skill | 快速验证功能/新改动：注入入口与数据，验证后清场恢复原状 |
-| **[format-keeper](skills/format-keeper/README.md)** | skill | 提交前统一格式化：先 `git add -A`，优先 `prettier:auto`、其次 `lc-build`，失败才回退暂存区脚本；输出状态供 `/gitflow:commit` 判断 |
-| **[ones-parser](skills/ones-parser/README.md)** | skill | 解析 ONES 平台复制的工单内容（ID / 标题 / 链接），作为 commit 引用的单一事实来源 |
-| **[month-log-summary](skills/month-log-summary/README.md)** | skill | 为 month-log 月日志补写「AI月总结」章节：OKR 三段式（平时表现/常规工作/自我评价）可直接复制，仓库自动定位，已存在即覆盖 |
-| **[commit-flow](commands/commit-flow/README.md)** | command | 通用提交流水线（单仓库、无 MR）：敏感文件检查 → 格式化 → 乱码检测 → commit-draft → 提交推送 |
-| **[commit-draft](commands/commit-draft/README.md)** | command | 基于暂存区生成 Conventional Commits 规范的 commit message |
-| **[mojibake-fixer](commands/mojibake-fixer/README.md)** | command | 修复 AI 生成内容中的乱码（U+FFFD 等） |
-| **[session-review](commands/session-review/README.md)** | command | 生成技术复盘报告（背景、根因、方案、验证） |
-| **[ts-standards](rules/ts-standards/README.md)** | rules | 5 条 TS 必备规则（注释/风格/类型/错误处理/测试），路径作用域自动生效 |
-| **[ts-code-guide](docs/ts-code-guide/README.md)** | docs | TS 规范参考文档（注释/风格/类型/错误处理/测试 5 份指南）→ `~/.claude/docs/`，按需引用不占上下文 |
-| **[openspec](suites/openspec/README.md)** | suite | 6 个 `/opsx:*` 斜杠命令，规范驱动开发（需全局安装 `openspec` CLI） |
-| **[gitflow](suites/gitflow/README.md)** | suite | 环境分支 + 任务分支 + 多仓库协同 + 环境提升 + 历史分支清理工作流：`/gitflow:init`、`start`、`sync`、`commit`、`merge`、`promote`、`clean` 7 个命令 + `gitflow-core` 技能 + 配置参考 |
-| **[ones CLI](clis/ones/README.md)** | clis | ONES 版 glab：webapi 直连读写工单/评论/工时（`ones ticket/comment/hours/doctor/auth`），Bearer 直连免浏览器，refresh 自动续期，npm run link:ones 注册全局命令 |
-| **[ones](suites/ones/README.md)** | suite | ONES 工单操作流：`/ones:init`（含认证）、`read`、`comment`、`hours`、`wrapup` 5 个命令 + `ones-core` 技能；可逆直发/不可逆确认两档写安全、工单上下文自动识别、AI 内容标识；依赖 ones CLI |
-| **[session-keeper](suites/session-keeper/README.md)** | suite | 会话体验守护：当前提供标题自动维护（`UserPromptSubmit` hook 每轮提醒 + 技能判定漂移并改写，支持 ONES 单号前缀），后续可扩展会话状态等能力 |
-| **[settings](settings/README.md)** | settings | 多模型切换（`_base.json` + profiles 合并）+ 全局 `CLAUDE.md` 部署（`deploy settings`） |
-| **[gitinit](gitinit/README.md)** | gitinit | `~/.claude` 本地 git 追踪：`claude-lab gitinit` 覆盖 `.gitignore`（同 switch 覆盖 settings.json），追踪 deploy/switch 的文件变化 |
+| 模块                                                                | 类型     | 说明                                                                                                                                                                                     |
+| ------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[skill-forge](skills/skill-forge/README.md)**                     | skill    | 创建、维护、迭代所有模块（单模块 + 聚合套件）                                                                                                                                            |
+| **[comment-keeper](skills/comment-keeper/README.md)**               | skill    | 按 TS 注释规范统一调整代码注释（核对/增删改/补录，必要时重构自解释）                                                                                                                     |
+| **[style-keeper](skills/style-keeper/README.md)**                   | skill    | 按编码风格规范统一命名与常量：ESLint/Prettier 自动兜底，改名安全分级                                                                                                                     |
+| **[type-keeper](skills/type-keeper/README.md)**                     | skill    | 按类型安全规范修复类型漏洞：清 any / @ts-ignore / 非空断言，tsc 全绿门禁                                                                                                                 |
+| **[error-handling-keeper](skills/error-handling-keeper/README.md)** | skill    | 按错误处理规范修复存量代码：语义等价直接做，控制流改动列清单                                                                                                                             |
+| **[test-keeper](skills/test-keeper/README.md)**                     | skill    | 按测试规范补充与修复单元测试：无测试走方案，有测试审质量                                                                                                                                 |
+| **[live-debugger](skills/live-debugger/README.md)**                 | skill    | 模拟人工 debugger 流程定位前端 bug：埋点 → 自动复现（Playwright MCP 优先）→ 收敛 → 修复清理                                                                                              |
+| **[quick-start](skills/quick-start/README.md)**                     | skill    | 快速验证功能/新改动：注入入口与数据，验证后清场恢复原状                                                                                                                                  |
+| **[format-keeper](skills/format-keeper/README.md)**                 | skill    | 提交前统一格式化：先 `git add -A`，优先 `prettier:auto`、其次 `lc-build`，失败才回退暂存区脚本；输出状态供 `/gitflow:commit` 判断                                                        |
+| **[ones-parser](skills/ones-parser/README.md)**                     | skill    | 解析 ONES 平台复制的工单内容（ID / 标题 / 链接），作为 commit 引用的单一事实来源                                                                                                         |
+| **[month-log-summary](skills/month-log-summary/README.md)**         | skill    | 为 month-log 月日志补写「AI月总结」章节：OKR 三段式（平时表现/常规工作/自我评价）可直接复制，仓库自动定位，已存在即覆盖                                                                  |
+| **[commit-flow](commands/commit-flow/README.md)**                   | command  | 通用提交流水线（单仓库、无 MR）：敏感文件检查 → 格式化 → 乱码检测 → commit-draft → 提交推送                                                                                              |
+| **[commit-draft](commands/commit-draft/README.md)**                 | command  | 基于暂存区生成 Conventional Commits 规范的 commit message                                                                                                                                |
+| **[mojibake-fixer](commands/mojibake-fixer/README.md)**             | command  | 修复 AI 生成内容中的乱码（U+FFFD 等）                                                                                                                                                    |
+| **[session-review](commands/session-review/README.md)**             | command  | 生成技术复盘报告（背景、根因、方案、验证）                                                                                                                                               |
+| **[ts-standards](rules/ts-standards/README.md)**                    | rules    | 5 条 TS 必备规则（注释/风格/类型/错误处理/测试），路径作用域自动生效                                                                                                                     |
+| **[ts-code-guide](docs/ts-code-guide/README.md)**                   | docs     | TS 规范参考文档（注释/风格/类型/错误处理/测试 5 份指南）→ `~/.claude/docs/`，按需引用不占上下文                                                                                          |
+| **[openspec](suites/openspec/README.md)**                           | suite    | 6 个 `/opsx:*` 斜杠命令，规范驱动开发（需全局安装 `openspec` CLI）                                                                                                                       |
+| **[gitflow](suites/gitflow/README.md)**                             | suite    | 环境分支 + 任务分支 + 多仓库协同 + 环境提升 + 历史分支清理工作流：`/gitflow:init`、`start`、`sync`、`commit`、`merge`、`promote`、`clean` 7 个命令 + `gitflow-core` 技能 + 配置参考      |
+| **[ones CLI](clis/ones/README.md)**                                 | clis     | ONES 版 glab：webapi 直连读写工单/评论/工时（`ones ticket/comment/hours/doctor/auth`），Bearer 直连免浏览器，refresh 自动续期，npm run link:ones 注册全局命令                            |
+| **[ones](suites/ones/README.md)**                                   | suite    | ONES 工单操作流：`/ones:init`（含认证）、`read`、`comment`、`hours`、`wrapup` 5 个命令 + `ones-core` 技能；可逆直发/不可逆确认两档写安全、工单上下文自动识别、AI 内容标识；依赖 ones CLI |
+| **[session-keeper](suites/session-keeper/README.md)**               | suite    | 会话体验守护：当前提供标题自动维护（`UserPromptSubmit` hook 每轮提醒 + 技能判定话题变化并以最新话题改写，支持 ONES 单号前缀），后续可扩展会话状态等能力                                  |
+| **[settings](settings/README.md)**                                  | settings | 多模型切换（`_base.json` + profiles 合并）+ 全局 `CLAUDE.md` 部署（`deploy settings`）                                                                                                   |
+| **[gitinit](gitinit/README.md)**                                    | gitinit  | `~/.claude` 本地 git 追踪：`claude-lab gitinit` 覆盖 `.gitignore`（同 switch 覆盖 settings.json），追踪 deploy/switch 的文件变化                                                         |
+
+### 🟢 独立应用（apps/）
+
+| 应用                                  | 状态     | 说明                                                                                                            |
+| ------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------- |
+| **[Pinglet](apps/pinglet/README.md)** | v1.3 可用 | 置顶常驻小窗，聚合所有 Claude Code 会话状态；重点提示待处理（红色）与已中断（黄色），双击行打开对应 VSCode 目录或终端 |
 
 ### 🟡 规划中
 
-| 模块 / 方向 | 说明 |
-| --- | --- |
-| **hooks 扩展** | 会话守护已落地（`session-keeper`）；后续：会话状态更新、部署后一致性核对、提交前提醒等自动化 hook |
-| **agents 子代理** | 规范审查专用代理，主对话只拿结论，省上下文 |
-| **workflows 编排** | 批量重构 / 批量规范审查等多 agent 并行场景 |
+| 模块 / 方向                        | 说明                                                                                                                                                                 |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **hooks 扩展**                     | 会话守护已落地（`session-keeper`）；后续：会话状态更新、部署后一致性核对、提交前提醒等自动化 hook                                                                    |
+| **agents 子代理**                  | 规范审查专用代理，主对话只拿结论，省上下文                                                                                                                           |
+| **workflows 编排**                 | 批量重构 / 批量规范审查等多 agent 并行场景                                                                                                                           |
 | **AI 辅助自动化测试 / Skill 评测** | 三层混合架构：语义化标签 + Page Object + AI 只做维护，见 [plans/ai-assisted-testing.md](project-docs/plans/ai-assisted-testing.md)（未来研究，需被测项目有测试框架） |
-| **Claude 会话状态看板** | 置顶常驻小窗聚合所有 Claude Code 会话状态（询问中 / 进行中 / 已完成 / 已中断），重点提醒需处理的会话，避免多会话并行时卡住，见 [plans/session-review.md](project-docs/plans/session-review.md) |
 
 类型目录：`hooks/` · `workflows/` · `agents/` 已预留，按需生长
 
@@ -142,28 +148,28 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 
 ### 🧭 快速决策
 
-| 你的目标 | 推荐路径 |
-| --- | --- |
-| 想创建新技能/命令 | `/skill-forge "创建一个 xxx"` |
-| 想按规范整理/修复代码注释 | `/comment-keeper`（可指定文件/目录/函数） |
-| 想统一命名/清理魔法数字 | `/style-keeper`（可指定文件/目录） |
-| 想格式化代码 | `/format-keeper`（统一暂存并格式化全部 git 变更；优先 `prettier:auto` / `lc-build`） |
-| 想生成 gitflow 配置 | `/gitflow:init`（只识别仓库名开头的 `X.Y` 版本/环境分支且一年内活跃，`3.2.0918` 之类多段数字排除；默认只处理当前仓库，`--all` 扫描父目录下全部仓库；未解析映射唯一候选自动补全、否则留空列候选；全程不询问；从默认环境分支最近 10 条 merge 推断仓库审核人；直接写入 `~/.claude/gitflow.json`） |
-| 想按 ONES 单创建任务分支 | `/gitflow:start <工单内容/单号> [环境]`（`--repos` 为兄弟仓库建对齐分支；开发中发现其他仓库要改时用 `--repo <name> --branch <当前分支>` 先建分支） |
-| 想把环境最新改动合入任务分支 | `/gitflow:sync [环境]`（冲突可在限额内让 AI 尝试解决，确认后提交） |
-| 想提交并推送任务分支 | `/gitflow:commit`（默认 push，`--no-push` 只提交；其他仓库仅在同名分支时自动提交，不同分支改动忽略；`--repo` 只操作指定仓库） |
-| 想创建合入环境的 MR | `/gitflow:merge`（审核人取 `repos.<name>.reviewers` / `mr.reviewers`，可 `--reviewer` / `--no-reviewer`；支持 `--repo`、`--dry-run`） |
-| 想把任务分支的改动提升到更高环境（无需等待源环境合并） | `/gitflow:promote [环境]`（从目标环境新建任务分支 → cherry-pick 源分支相对目标环境的未合入提交 → 创建 MR；冲突限额内自动解决；多仓库用 `--repos`，`--dry-run` 只预览） |
-| 想清理历史任务分支 | `/gitflow:clean [--days 14]`（只列用户名前缀、最后提交早于阈值的本地/远端分支；先列清单不删除，用户明确回复“全部删除 / 保留 N / 只删 N”后才删；删除前复核 SHA） |
-| 想修复类型安全漏洞 | `/type-keeper`（可指定文件/目录） |
-| 想修复错误处理问题 | `/error-handling-keeper`（可指定文件/目录） |
-| 想补充/修复单元测试 | `/test-keeper`（可指定模块/目录） |
-| 想定位前端 bug | `/live-debugger "复现步骤 + 现状 + 预期"` |
-| 想快速验证功能/新改动 | `/quick-start "验证诉求与预期结果"` |
-| 想管理多模型配置 | `claude-lab switch <profile>` |
-| 想更新全局个人指令 | 修改 `settings/CLAUDE.md` 后 `claude-lab deploy settings` |
-| 想用规范驱动开发 | `claude-lab deploy openspec`，然后 `/opsx:propose` |
-| 想查看有哪些可用模块 | `claude-lab list` |
+| 你的目标                                               | 推荐路径                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 想创建新技能/命令                                      | `/skill-forge "创建一个 xxx"`                                                                                                                                                                                                                                                                  |
+| 想按规范整理/修复代码注释                              | `/comment-keeper`（可指定文件/目录/函数）                                                                                                                                                                                                                                                      |
+| 想统一命名/清理魔法数字                                | `/style-keeper`（可指定文件/目录）                                                                                                                                                                                                                                                             |
+| 想格式化代码                                           | `/format-keeper`（统一暂存并格式化全部 git 变更；优先 `prettier:auto` / `lc-build`）                                                                                                                                                                                                           |
+| 想生成 gitflow 配置                                    | `/gitflow:init`（只识别仓库名开头的 `X.Y` 版本/环境分支且一年内活跃，`3.2.0918` 之类多段数字排除；默认只处理当前仓库，`--all` 扫描父目录下全部仓库；未解析映射唯一候选自动补全、否则留空列候选；全程不询问；从默认环境分支最近 10 条 merge 推断仓库审核人；直接写入 `~/.claude/gitflow.json`） |
+| 想按 ONES 单创建任务分支                               | `/gitflow:start <工单内容/单号> [环境]`（`--repos` 为兄弟仓库建对齐分支；开发中发现其他仓库要改时用 `--repo <name> --branch <当前分支>` 先建分支）                                                                                                                                             |
+| 想把环境最新改动合入任务分支                           | `/gitflow:sync [环境]`（冲突可在限额内让 AI 尝试解决，确认后提交）                                                                                                                                                                                                                             |
+| 想提交并推送任务分支                                   | `/gitflow:commit`（默认 push，`--no-push` 只提交；其他仓库仅在同名分支时自动提交，不同分支改动忽略；`--repo` 只操作指定仓库）                                                                                                                                                                  |
+| 想创建合入环境的 MR                                    | `/gitflow:merge`（审核人取 `repos.<name>.reviewers` / `mr.reviewers`，可 `--reviewer` / `--no-reviewer`；支持 `--repo`、`--dry-run`）                                                                                                                                                          |
+| 想把任务分支的改动提升到更高环境（无需等待源环境合并） | `/gitflow:promote [环境]`（从目标环境新建任务分支 → cherry-pick 源分支相对目标环境的未合入提交 → 创建 MR；冲突限额内自动解决；多仓库用 `--repos`，`--dry-run` 只预览）                                                                                                                         |
+| 想清理历史任务分支                                     | `/gitflow:clean [--days 14]`（只列用户名前缀、最后提交早于阈值的本地/远端分支；先列清单不删除，用户明确回复“全部删除 / 保留 N / 只删 N”后才删；删除前复核 SHA）                                                                                                                                |
+| 想修复类型安全漏洞                                     | `/type-keeper`（可指定文件/目录）                                                                                                                                                                                                                                                              |
+| 想修复错误处理问题                                     | `/error-handling-keeper`（可指定文件/目录）                                                                                                                                                                                                                                                    |
+| 想补充/修复单元测试                                    | `/test-keeper`（可指定模块/目录）                                                                                                                                                                                                                                                              |
+| 想定位前端 bug                                         | `/live-debugger "复现步骤 + 现状 + 预期"`                                                                                                                                                                                                                                                      |
+| 想快速验证功能/新改动                                  | `/quick-start "验证诉求与预期结果"`                                                                                                                                                                                                                                                            |
+| 想管理多模型配置                                       | `claude-lab switch <profile>`                                                                                                                                                                                                                                                                  |
+| 想更新全局个人指令                                     | 修改 `settings/CLAUDE.md` 后 `claude-lab deploy settings`                                                                                                                                                                                                                                      |
+| 想用规范驱动开发                                       | `claude-lab deploy openspec`，然后 `/opsx:propose`                                                                                                                                                                                                                                             |
+| 想查看有哪些可用模块                                   | `claude-lab list`                                                                                                                                                                                                                                                                              |
 
 ## 参考
 

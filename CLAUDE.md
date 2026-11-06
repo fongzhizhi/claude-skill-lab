@@ -14,7 +14,7 @@ Claude Code 扩展能力的个人研发工作台：在仓库中锻造 skill / ag
 npm run link                  # 注册全局命令 claude-lab（npm link）；npm run unlink 可移除
 ```
 
-之后在**任意目录**用全局命令 `claude-lab` 操作（等价于 `node cli/lab.js`，仓库定位与当前目录无关）：
+之后在**任意目录**用全局命令 `claude-lab` 操作（等价于 `node lab/index.js`，仓库定位与当前目录无关）：
 
 ```bash
 claude-lab                    # 帮助
@@ -27,7 +27,7 @@ claude-lab switch <profile>   # 切换模型配置（--ephemeral 仅当前会话
 claude-lab gitinit            # 覆盖 ~/.claude/.gitignore（来自 gitinit/.gitignore.template 模板，同 switch 覆盖 settings.json）
 ```
 
-仓库内也保留 npm 脚本薄封装：`npm run lab`（帮助）、`npm run deploy <name>`、`npm run switch <profile>`、`npm run list` / `status` / `remove`。`npm run deploy --all` 无需 `--` 分隔符——CLI 会从 `npm_config_all`/`npm_config_force` 环境变量恢复 npm 消费掉的标志（见 `lab.js` 的 `main()`）；全局命令 `claude-lab deploy --all` 参数直传，天然无此问题。
+仓库内也保留 npm 脚本薄封装：`npm run lab`（帮助）、`npm run deploy <name>`、`npm run switch <profile>`、`npm run list` / `status` / `remove` / `gitinit`。`npm run deploy --all` 无需 `--` 分隔符——CLI 会从 `npm_config_all`/`npm_config_force` 环境变量恢复 npm 消费掉的标志（见 `lab/index.js` 的 `main()`）；全局命令 `claude-lab deploy --all` 参数直传，天然无此问题。
 
 ## 架构
 
@@ -44,7 +44,7 @@ claude-lab gitinit            # 覆盖 ~/.claude/.gitignore（来自 gitinit/.gi
 - `dist/` —— **成品目录，与 `~/.claude/` 相对路径一一对应（镜像结构），`claude-lab deploy` 唯一关注的地方**，所有文件按相对路径原样递归复制
 - `meta.json` —— 可选，声明外部 CLI 前置依赖
 
-### 部署形态（cli/lab.js 核心逻辑）
+### 部署形态（lab/index.js 核心逻辑）
 
 - **dist/ 即 ~/.claude/ 镜像**：所有模块（单模块与套件）的 `dist/` 目录都与 `~/.claude/` 的相对路径一一对应，部署 = 按相对路径原样递归复制。单模块为隐式全量镜像（`dist/` 下所有文件直接复制，无需声明）；套件通过 `manifest.json` 显式声明映射子集。
 - 单模块示例：`dist/commands/foo.md` → `~/.claude/commands/foo.md`；`dist/skills/foo/SKILL.md` → `~/.claude/skills/foo/SKILL.md`（skills 部署目标为目录 `~/.claude/skills/<name>/`，故镜像中多一层）
@@ -68,13 +68,22 @@ claude-lab gitinit            # 覆盖 ~/.claude/.gitignore（来自 gitinit/.gi
 
 ### 顶层 manifest.json 与新增类型
 
-顶层 `manifest.json` 的 `types` 映射模块类型 → `~/.claude/` 目标路径。新增模块类型 = 建顶层目录 + 在 `types` 加一条映射，CLI 代码零改动。注意：`lab.js` 内嵌的 `TYPES` 与 `DIST_FILE_MAP` 是部署逻辑的事实来源，与顶层 manifest.json 需保持一致。
+顶层 `manifest.json` 的 `types` 映射模块类型 → `~/.claude/` 目标路径。新增模块类型 = 建顶层目录 + 在 `types` 加一条映射，CLI 代码零改动。注意：`lab/index.js` 内嵌的 `TYPES` 与 `DIST_FILE_MAP` 是部署逻辑的事实来源，与顶层 manifest.json 需保持一致。
+
+### clis/ 与 apps/：非 lab 管理的工具目录
+
+两个顶层目录存放自研工具，**不进入 lab 的模块体系**：
+
+- `clis/<name>/` — 自研 CLI 工具（如 ones CLI），`npm run link:<name>` 注册全局命令，改代码即时生效
+- `apps/<name>/` — 自研 GUI / 桌面应用，各自独立构建链（如 Tauri），产物是安装包而非 `~/.claude/` 下的文件
+
+共同约束：不加入顶层 `manifest.json` 的 `types`，也不加入 `lab/index.js` 的 `TYPES`——`claude-lab list` / `status` / `deploy --all` 均不感知。它们的终点不是 `~/.claude/` 镜像，而是「用户自行安装并运行的程序」，因此不适用 `dist/` 约定。
 
 ### settings/ 配置模块
 
 - 是 `~/.claude/` 的镜像：`settings.template.json` 入仓（占位符），`settings.json` 不入仓（`.gitignore`，含真实 API Key，手动从模板拷贝生成）
 - 多模型切换：`profiles/_base.json` + `<profile>.json` 深度合并 → 写入 `~/.claude/settings.json`
-- **ANTHROPIC_AUTH_TOKEN 保护**（`lab.js` 的 `buildProfileConfig`）：profile/base 中为占位符（如 `API_KEY`、`YOUR_API_KEY_HERE`）时移除该键并继承本地已有真实值，防止误覆盖
+- **ANTHROPIC_AUTH_TOKEN 保护**（`lab/index.js` 的 `buildProfileConfig`）：profile/base 中为占位符（如 `API_KEY`、`YOUR_API_KEY_HERE`）时移除该键并继承本地已有真实值，防止误覆盖
 - `settings/CLAUDE.md` 是部署到 `~/.claude/CLAUDE.md` 的**全局个人指令**，与本项目级 CLAUDE.md 无关
 
 ### gitinit/ 配置模块

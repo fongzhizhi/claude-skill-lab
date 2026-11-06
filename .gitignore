@@ -4,3 +4,8 @@ settings/settings.json
 node_modules/
 *.log
 .DS_Store
+
+# 自研桌面应用构建产物（apps/：Tauri / Rust）
+apps/*/src-tauri/target/
+apps/*/target/
+apps/*/bundle/

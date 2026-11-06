@@ -50,7 +50,6 @@
       "Bash(chown *)",
       "Bash(dd *)",
       "Bash(mkfs.*)",
-      "Bash(:(){ :|:& };:)",
       "Edit(**/*.secret.*)",
       "Write(**/*.secret.*)",
       "Write(**/.env)",

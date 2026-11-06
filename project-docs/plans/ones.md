@@ -12,7 +12,6 @@
 4. 写操作必须支持 `--dry-run`，写后读回，不自动重试。
 5. CLI 不可用时套件停摆，不退回浏览器/CDP。
 
-
 ## 一、背景与目标
 
 ### 问题
@@ -24,13 +23,13 @@
 
 ### 目标
 
-| 目标 | 说明 |
-|------|------|
-| 独立 CLI | `ones` 命令可脱离 Claude 使用，覆盖 auth、读、写、doctor |
+| 目标     | 说明                                                           |
+| -------- | -------------------------------------------------------------- |
+| 独立 CLI | `ones` 命令可脱离 Claude 使用，覆盖 auth、读、写、doctor       |
 | 套件一期 | 读工单描述并输出核心表达；评论增删改查；缺陷分析评论；工时登记 |
-| 稳定契约 | CLI 与套件通过命令 + JSON + 退出码交互，不互相 import |
-| 安全写入 | 预览/确认、读回验证、去重、不自动重试 |
-| 可维护 | 私有 API 变化时只改 CLI 的 profile，套件不动 |
+| 稳定契约 | CLI 与套件通过命令 + JSON + 退出码交互，不互相 import          |
+| 安全写入 | 预览/确认、读回验证、去重、不自动重试                          |
+| 可维护   | 私有 API 变化时只改 CLI 的 profile，套件不动                   |
 
 ### 非目标（一期不做）
 
@@ -42,21 +41,19 @@
 - 浏览器/CDP 自动化
 - 纯人工模式
 
-
 ## 二、关键决策
 
-| 决策 | 结论 | 理由 |
-|------|------|------|
-| 传输方式 | 仅 `webapi` | 私有部署不支持官方 OpenAPI；三个验证（读回放、写回放、会话寿命）已通过 |
-| CLI 与套件 | 完全分离 | CLI = glab，套件 = gitflow；代码、安装、版本独立 |
-| CLI 命名 | 二进制 `ones`，包名 `ones-cli` | 短、自然；包名避免冲突 |
-| 套件命名 | `ones` | `/ones:init`；与 `ones` 命令共享域名但不冲突 |
-| CLI 目录 | `clis/ones/` | 独立 Node 包，不归 `claude-lab` 部署 |
-| 套件目录 | `suites/ones/` | 标准套件，`claude-lab deploy ones` |
-| 套件一期范围 | 读描述摘要 + 评论增删改查 + 缺陷分析评论 + 工时登记 | 先覆盖高频手工操作；状态/收尾后置 |
-| 开发顺序 | 契约 → CLI → 套件 | CLI 稳定前不写套件，避免命令层反复改 |
-| 浏览器 | 不使用 | 运行时不做 CDP；采集契约时用 DevTools 查看请求/响应 |
-
+| 决策         | 结论                                                | 理由                                                                   |
+| ------------ | --------------------------------------------------- | ---------------------------------------------------------------------- |
+| 传输方式     | 仅 `webapi`                                         | 私有部署不支持官方 OpenAPI；三个验证（读回放、写回放、会话寿命）已通过 |
+| CLI 与套件   | 完全分离                                            | CLI = glab，套件 = gitflow；代码、安装、版本独立                       |
+| CLI 命名     | 二进制 `ones`，包名 `ones-cli`                      | 短、自然；包名避免冲突                                                 |
+| 套件命名     | `ones`                                              | `/ones:init`；与 `ones` 命令共享域名但不冲突                           |
+| CLI 目录     | `clis/ones/`                                        | 独立 Node 包，不归 `claude-lab` 部署                                   |
+| 套件目录     | `suites/ones/`                                      | 标准套件，`claude-lab deploy ones`                                     |
+| 套件一期范围 | 读描述摘要 + 评论增删改查 + 缺陷分析评论 + 工时登记 | 先覆盖高频手工操作；状态/收尾后置                                      |
+| 开发顺序     | 契约 → CLI → 套件                                   | CLI 稳定前不写套件，避免命令层反复改                                   |
+| 浏览器       | 不使用                                              | 运行时不做 CDP；采集契约时用 DevTools 查看请求/响应                    |
 
 ## 三、总体架构与 CLI/套件关系
 
@@ -83,11 +80,11 @@ Claude 对话
 
 ### 3.3 职责边界
 
-| 层 | 负责 | 不负责 |
-|----|------|--------|
-| CLI | HTTP、Cookie/CSRF、ID 映射、分页、错误归一化、JSON、dry-run、doctor | 评论内容、工时/状态决策、gitflow/session-review |
-| 套件 | 意图理解、工单解析、内容生成、预览确认、编排 | HTTP、Cookie、端点、原始响应字段 |
-| Claude | 对话、确认、异常处理 | 直接拼 HTTP 请求 |
+| 层     | 负责                                                                | 不负责                                          |
+| ------ | ------------------------------------------------------------------- | ----------------------------------------------- |
+| CLI    | HTTP、Cookie/CSRF、ID 映射、分页、错误归一化、JSON、dry-run、doctor | 评论内容、工时/状态决策、gitflow/session-review |
+| 套件   | 意图理解、工单解析、内容生成、预览确认、编排                        | HTTP、Cookie、端点、原始响应字段                |
+| Claude | 对话、确认、异常处理                                                | 直接拼 HTTP 请求                                |
 
 判断一个功能放哪层，用两个问题：
 
@@ -98,18 +95,18 @@ Claude 对话
 
 ### 3.4 交互契约
 
-| 问题 | 答案 |
-|------|------|
-| 谁依赖谁 | 套件依赖 CLI；CLI 不知道套件 |
-| 怎么交互 | shell 命令 + `--json` + 退出码 |
-| 谁管 Cookie/CSRF | CLI |
-| 谁管评论内容 | 套件 |
-| 谁管端点/字段 | CLI 的 `profile.js` |
-| 谁管工时/状态决策 | 套件（一期管工时；状态后续） |
-| 安装 | CLI 独立 `npm link`；套件 `claude-lab deploy ones` |
-| 版本 | CLI semver + `schemaVersion`；套件声明兼容范围 |
-| CLI 不可用 | 套件停摆，不退回浏览器 |
-| CLI 升级 | 先看 `CONTRACT.md`；套件通常不用动 |
+| 问题              | 答案                                               |
+| ----------------- | -------------------------------------------------- |
+| 谁依赖谁          | 套件依赖 CLI；CLI 不知道套件                       |
+| 怎么交互          | shell 命令 + `--json` + 退出码                     |
+| 谁管 Cookie/CSRF  | CLI                                                |
+| 谁管评论内容      | 套件                                               |
+| 谁管端点/字段     | CLI 的 `profile.js`                                |
+| 谁管工时/状态决策 | 套件（一期管工时；状态后续）                       |
+| 安装              | CLI 独立 `npm link`；套件 `claude-lab deploy ones` |
+| 版本              | CLI semver + `schemaVersion`；套件声明兼容范围     |
+| CLI 不可用        | 套件停摆，不退回浏览器                             |
+| CLI 升级          | 先看 `CONTRACT.md`；套件通常不用动                 |
 
 ### 3.5 典型调用链
 
@@ -160,7 +157,6 @@ claude-skill-lab/
 - **边界清晰**：套件不会混入 HTTP/Cookie，CLI 不会混入业务判断。
 - **失败隔离**：CLI 坏了，套件停摆并报错；套件改坏了，CLI 不受影响。
 
-
 ## 四、CLI 设计
 
 ### 4.1 原则
@@ -200,27 +196,27 @@ clis/ones/
 └── CHANGELOG.md
 ```
 
-> `cli/`（单数）是 `claude-lab` 自身的部署工具；`clis/`（复数）是独立 CLI 集合。是否把 `cli/` 改名为 `lab/` 待定。
+> `lab/`（原 `cli/`，已改名）是 `claude-lab` 自身的部署工具；`clis/`（复数）是独立 CLI 集合。
 
 ### 4.3 命令
 
-| 命令 | 作用 | 版本 |
-|------|------|------|
-| `ones auth status` | 检查会话是否存在/过期 | v0.1 |
-| `ones auth set --cookie-file` | 更新 Cookie/CSRF | v0.1 |
-| `ones doctor [--ticket]` | 配置/会话/身份/读能力自检 | v0.1 |
-| `ones user me` | 当前用户 | v0.1 |
-| `ones ticket get <id>` | 解析展示号并读详情 | v0.1 |
-| `ones ticket resolve <id>` | 展示号 → 内部 ID/团队 | v0.1 |
-| `ones comment list <id>` | 评论列表（分页） | v0.1 |
-| `ones comment add <id> --body-file` | 新增评论 | v0.2 |
-| `ones comment edit <id> --comment-id --body-file` | 编辑评论 | v0.2 |
-| `ones comment delete <id> --comment-id --yes` | 删除评论 | v0.2 |
-| `ones worklog list <id>` | 工时列表 | v0.1 |
-| `ones worklog types` | 工时类型列表 | v0.1 |
-| `ones worklog add <id> --hours <h> --type <type> [--date <date>] [--note <text>]` | 登记工时 | v0.2 |
-| `ones status transitions <id>` | 可用流转 | 后续 |
-| `ones status set <id> --to ...` | 执行流转 | 后续 |
+| 命令                                                                              | 作用                      | 版本 |
+| --------------------------------------------------------------------------------- | ------------------------- | ---- |
+| `ones auth status`                                                                | 检查会话是否存在/过期     | v0.1 |
+| `ones auth set --cookie-file`                                                     | 更新 Cookie/CSRF          | v0.1 |
+| `ones doctor [--ticket]`                                                          | 配置/会话/身份/读能力自检 | v0.1 |
+| `ones user me`                                                                    | 当前用户                  | v0.1 |
+| `ones ticket get <id>`                                                            | 解析展示号并读详情        | v0.1 |
+| `ones ticket resolve <id>`                                                        | 展示号 → 内部 ID/团队     | v0.1 |
+| `ones comment list <id>`                                                          | 评论列表（分页）          | v0.1 |
+| `ones comment add <id> --body-file`                                               | 新增评论                  | v0.2 |
+| `ones comment edit <id> --comment-id --body-file`                                 | 编辑评论                  | v0.2 |
+| `ones comment delete <id> --comment-id --yes`                                     | 删除评论                  | v0.2 |
+| `ones worklog list <id>`                                                          | 工时列表                  | v0.1 |
+| `ones worklog types`                                                              | 工时类型列表              | v0.1 |
+| `ones worklog add <id> --hours <h> --type <type> [--date <date>] [--note <text>]` | 登记工时                  | v0.2 |
+| `ones status transitions <id>`                                                    | 可用流转                  | 后续 |
+| `ones status set <id> --to ...`                                                   | 执行流转                  | 后续 |
 
 一期实现 ticket/comment/worklog 相关命令；status 等 CLI 能力随套件后续扩展再补。
 后续：`ticket update --description`、`worklog update/delete`、附件、搜索。
@@ -287,7 +283,6 @@ Transition: id, name, toStatus, requiredFields           # 后续
 - 评论去重由套件做（先 list 再 add）；工时按日期/工时/备注查重；一期不做批量删除。
 - 后续的状态写操作沿用同一套预览、确认、读回规则。
 
-
 ## 五、套件设计
 
 ### 5.1 一期范围
@@ -305,17 +300,17 @@ Transition: id, name, toStatus, requiredFields           # 后续
 
 ### 5.2 命令
 
-| 命令 | 作用 | 一期 |
-|------|------|------|
-| `/ones:init` | 检查 CLI、跑 doctor、写套件默认配置 | 是（安装入口） |
-| `/ones:auth` | 引导更新 Cookie/CSRF 并自检 | 是（认证入口） |
-| `/ones:read <ticket>` | 读取工单描述，输出核心表达 | 是 |
-| `/ones:comment` | 评论列表/新建/修改/删除 | 是 |
-| `/ones:analysis <ticket>` | 生成并写入缺陷分析评论 | 是 |
-| `/ones:worklog` | 登记工时（类型/日期/备注），列表用于确认 | 是 |
-| `/ones:status` | 查看/执行流转 | 后续 |
-| `/ones:wrapup` | 合并后收尾编排 | 后续 |
-| `/ones:parse` | 离线解析工单文本 | 后续（ones-parser 仍独立供 gitflow 使用） |
+| 命令                      | 作用                                     | 一期                                      |
+| ------------------------- | ---------------------------------------- | ----------------------------------------- |
+| `/ones:init`              | 检查 CLI、跑 doctor、写套件默认配置      | 是（安装入口）                            |
+| `/ones:auth`              | 引导更新 Cookie/CSRF 并自检              | 是（认证入口）                            |
+| `/ones:read <ticket>`     | 读取工单描述，输出核心表达               | 是                                        |
+| `/ones:comment`           | 评论列表/新建/修改/删除                  | 是                                        |
+| `/ones:analysis <ticket>` | 生成并写入缺陷分析评论                   | 是                                        |
+| `/ones:worklog`           | 登记工时（类型/日期/备注），列表用于确认 | 是                                        |
+| `/ones:status`            | 查看/执行流转                            | 后续                                      |
+| `/ones:wrapup`            | 合并后收尾编排                           | 后续                                      |
+| `/ones:parse`             | 离线解析工单文本                         | 后续（ones-parser 仍独立供 gitflow 使用） |
 
 评论子命令：
 
@@ -398,18 +393,17 @@ Transition: id, name, toStatus, requiredFields           # 后续
 - 工时：修改/删除、按日汇总、批量登记。
 - 其他：工单描述写入、附件、搜索、删除审计/恢复策略。
 
-
 ## 六、开发与验证方式
 
 ### 6.1 分工
 
 本文档是实现会话的设计输入，只描述设计与契约，不包含代码；实现按第七节顺序进行。
 
-| 角色 | 做什么 |
-|------|--------|
-| 本文档 | 背景、决策、CLI/套件关系、契约、能力清单、阶段计划、风险 |
+| 角色     | 做什么                                                                                                                                                        |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 本文档   | 背景、决策、CLI/套件关系、契约、能力清单、阶段计划、风险                                                                                                      |
 | 实现会话 | 按本文档实现 `clis/ones/`（一期：ticket/comment/worklog），再实现 `suites/ones/`（一期：read/comment/analysis/worklog）；用真实 ONES 校准 `profile.js` 并验收 |
-| 人工 | 提供测试工单、Cookie/CSRF、确认写操作；判断业务语义 |
+| 人工     | 提供测试工单、Cookie/CSRF、确认写操作；判断业务语义                                                                                                           |
 
 实现顺序不变：先 CLI v0.1 读，再 v0.2 写，最后套件；CLI 未稳定前不写套件。一期 CLI 做 ticket/comment/worklog，status 随套件后续扩展再补。
 
@@ -436,38 +430,35 @@ Transition: id, name, toStatus, requiredFields           # 后续
 4. 如需整理，可本地跑 `ones-capture.js` 生成报告；报告只用来填 `profile.js`
 5. 把症状记录在实现会话中：哪条命令、HTTP 状态、错误码、缺哪个字段；原始数据保留在本地
 
-
 ## 七、阶段计划
 
-| 阶段 | 内容 | 验收 |
-|------|------|------|
-| P0 | CONTRACT、capture 工具 | 契约评审通过 |
-| P1 | CLI v0.1：auth/config/doctor/user/ticket/comment list/worklog list/types | mock 测试 + 真实 doctor/读 |
-| P2 | CLI v0.2：comment add/edit/delete、worklog add | 测试单写入/修改/删除 + 读回 |
-| P3 | 套件 v0.1：init/auth/read/comment/worklog | 部署后对话实测 |
-| P4 | 套件 v0.2：analysis + 缺陷分析模板 | 测试单生成/预览/写入/读回 |
-| P5 | 文档、版本、边界打磨 | README/CHANGELOG 完整 |
-| 后续 | status/wrapup、工时修改/删除、附件、搜索 | 按需扩展 |
-
+| 阶段 | 内容                                                                     | 验收                        |
+| ---- | ------------------------------------------------------------------------ | --------------------------- |
+| P0   | CONTRACT、capture 工具                                                   | 契约评审通过                |
+| P1   | CLI v0.1：auth/config/doctor/user/ticket/comment list/worklog list/types | mock 测试 + 真实 doctor/读  |
+| P2   | CLI v0.2：comment add/edit/delete、worklog add                           | 测试单写入/修改/删除 + 读回 |
+| P3   | 套件 v0.1：init/auth/read/comment/worklog                                | 部署后对话实测              |
+| P4   | 套件 v0.2：analysis + 缺陷分析模板                                       | 测试单生成/预览/写入/读回   |
+| P5   | 文档、版本、边界打磨                                                     | README/CHANGELOG 完整       |
+| 后续 | status/wrapup、工时修改/删除、附件、搜索                                 | 按需扩展                    |
 
 ## 八、风险与对策
 
-| 风险 | 对策 |
-|------|------|
+| 风险                     | 对策                                                                      |
+| ------------------------ | ------------------------------------------------------------------------- |
 | 私有 API 升级改端点/字段 | `profile.js` 集中映射；`SCHEMA_MISMATCH` 明确报错；doctor 输出 apiProfile |
-| Cookie 过期 | `auth status` 提前提示；`AUTH_EXPIRED` 给命令指引 |
-| CSRF 轮换 | CLI 响应后写回 secret；写不进去警告 |
-| 权限/WAF | 保留原始错误摘要；doctor 区分 401/403 |
-| 评论格式 | DevTools 确认 Markdown/HTML；必要时加转换 |
-| 删除评论不可逆 | 默认 dry-run；显式确认；删除后 list 读回；不做批量删除 |
-| 摘要失真/编造 | 只基于工单原文；区分事实与推断；原文没有的标注“未说明”；限制要点数量 |
-| 缺陷分析空泛 | 固定字段；根因/方案/验证必须具体；预览确认后才写入 |
-| 重复评论 | 写入前 list 检查相似内容；发现重复先询问 |
-| 工时类型/字段复杂 | 先读 types/list；类型或必填字段不明确就停摆，不猜 ID |
-| 重复登记工时 | 写入前按日期/工时/备注检查；疑似重复先询问；写后 list 读回 |
-| 工时单位/日期格式不一致 | 配置统一单位和日期格式；预览时明确显示 |
-| 密钥泄露 | secret 文件不入仓；不打印；不支持 argv 传 Cookie |
-
+| Cookie 过期              | `auth status` 提前提示；`AUTH_EXPIRED` 给命令指引                         |
+| CSRF 轮换                | CLI 响应后写回 secret；写不进去警告                                       |
+| 权限/WAF                 | 保留原始错误摘要；doctor 区分 401/403                                     |
+| 评论格式                 | DevTools 确认 Markdown/HTML；必要时加转换                                 |
+| 删除评论不可逆           | 默认 dry-run；显式确认；删除后 list 读回；不做批量删除                    |
+| 摘要失真/编造            | 只基于工单原文；区分事实与推断；原文没有的标注“未说明”；限制要点数量      |
+| 缺陷分析空泛             | 固定字段；根因/方案/验证必须具体；预览确认后才写入                        |
+| 重复评论                 | 写入前 list 检查相似内容；发现重复先询问                                  |
+| 工时类型/字段复杂        | 先读 types/list；类型或必填字段不明确就停摆，不猜 ID                      |
+| 重复登记工时             | 写入前按日期/工时/备注检查；疑似重复先询问；写后 list 读回                |
+| 工时单位/日期格式不一致  | 配置统一单位和日期格式；预览时明确显示                                    |
+| 密钥泄露                 | secret 文件不入仓；不打印；不支持 argv 传 Cookie                          |
 
 ## 九、待确认
 
@@ -479,14 +470,13 @@ Transition: id, name, toStatus, requiredFields           # 后续
 - [ ] 缺陷分析模板需要哪些固定字段、目标长度、是否中英双语？
 - [ ] 工时单位是小时还是天？日期格式是什么？
 - [ ] 工时类型如何选择、是否有默认值？是否允许一天登记多条？备注是否必填？
-- [ ] `cli/` 是否改名为 `lab/`？
+- [x] `cli/` 已改名为 `lab/`（`lab/index.js`）
 - [ ] CLI 是 `npm link` 还是内部 npm 包发布？
-
 
 ## 十、参考
 
 - [gitflow 计划](gitflow.md)
-- [session-review 计划](session-review.md)
+- [pinglet（会话状态看板）计划](pinglet.md)
 - [gitflow README](../../suites/gitflow/README.md)
 - [ones-parser](../../skills/ones-parser/README.md)
 - [CLAUDE.md](../../CLAUDE.md)

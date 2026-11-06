@@ -19,7 +19,7 @@
 
 6 个技能各自映射为 `{HOME}/.claude/skills/openspec-<name>/`，与单模块 skills 的部署形态（`dist/skills/<name>/` 镜像，`~/.claude/skills/<name>/` 整目录）一致。
 
-manifest 中**逐条列出**而非使用 `skills/*/SKILL.md` 通配：lab 部署器（`cli/lab.js`）仅支持单层目录 + 简单通配（`*` / `*.ext` / 精确文件名），无法展开跨目录 glob。逐条列出的额外好处是 `lab remove suites/openspec` 卸载时可精确回删每个技能目录。
+manifest 中**逐条列出**而非使用 `skills/*/SKILL.md` 通配：lab 部署器（`lab/index.js`）仅支持单层目录 + 简单通配（`*` / `*.ext` / 精确文件名），无法展开跨目录 glob。逐条列出的额外好处是 `lab remove suites/openspec` 卸载时可精确回删每个技能目录。
 
 ### D3：`openspec/config.yaml` 不进 manifest
 
