@@ -110,7 +110,7 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | **[quick-start](skills/quick-start/README.md)** | skill | 快速验证功能/新改动：注入入口与数据，验证后清场恢复原状 |
 | **[format-keeper](skills/format-keeper/README.md)** | skill | 提交前统一格式化：先 `git add -A`，优先 `prettier:auto`、其次 `lc-build`，失败才回退暂存区脚本；输出状态供 `/gitflow:commit` 判断 |
 | **[ones-parser](skills/ones-parser/README.md)** | skill | 解析 ONES 平台复制的工单内容（ID / 标题 / 链接），作为 commit 引用的单一事实来源 |
-| **[month-log-summary](skills/month-log-summary/README.md)** | skill | 为 month-log 月日志补写「AI月总结」章节：仓库自动定位，三种指定方式，已存在即覆盖 |
+| **[month-log-summary](skills/month-log-summary/README.md)** | skill | 为 month-log 月日志补写「AI月总结」章节：OKR 三段式（平时表现/常规工作/自我评价）可直接复制，仓库自动定位，已存在即覆盖 |
 | **[commit-flow](commands/commit-flow/README.md)** | command | 通用提交流水线（单仓库、无 MR）：敏感文件检查 → 格式化 → 乱码检测 → commit-draft → 提交推送 |
 | **[commit-draft](commands/commit-draft/README.md)** | command | 基于暂存区生成 Conventional Commits 规范的 commit message |
 | **[mojibake-fixer](commands/mojibake-fixer/README.md)** | command | 修复 AI 生成内容中的乱码（U+FFFD 等） |
