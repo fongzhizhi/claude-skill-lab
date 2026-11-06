@@ -25,12 +25,13 @@
         调整 dist/ 成品 ◀───── 反馈 · 迭代（skill-forge）─┘
 ```
 
-两种模块形态（`dist/` 均与 `~/.claude/` 相对路径一一对应，可直接 `cp -r <module>/dist/* ~/.claude/` 验证）：
+两种模块形态（`dist/` 均与 `~/.claude/` 相对路径一一对应，可直接 `cp -r <module>/dist/* ~/.claude/` 验证），另有独立 CLI 形态：
 
 | 形态 | 说明 | 适用场景 |
 | --- | --- | --- |
 | **单模块** | 单一类型、`dist/` 全量镜像、零配置 | 一个技能、一个斜杠命令 |
 | **聚合套件** | 多文件、可混合类型、`manifest.json` 声明映射 | OpenSpec 工具集、工作流系统 |
+| **独立 CLI** | `clis/<name>/`，`npm run link:<name>` 注册全局命令（不走 lab deploy，改代码即时生效） | ones CLI（ONES 版 glab） |
 
 > 目录结构、模块规范与部署细节见 [project-docs/design.md](project-docs/design.md)。
 
@@ -119,6 +120,9 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | **[ts-code-guide](docs/ts-code-guide/README.md)** | docs | TS 规范参考文档（注释/风格/类型/错误处理/测试 5 份指南）→ `~/.claude/docs/`，按需引用不占上下文 |
 | **[openspec](suites/openspec/README.md)** | suite | 6 个 `/opsx:*` 斜杠命令，规范驱动开发（需全局安装 `openspec` CLI） |
 | **[gitflow](suites/gitflow/README.md)** | suite | 环境分支 + 任务分支 + 多仓库协同 + 环境提升 + 历史分支清理工作流：`/gitflow:init`、`start`、`sync`、`commit`、`merge`、`promote`、`clean` 7 个命令 + `gitflow-core` 技能 + 配置参考 |
+| **[ones CLI](clis/ones/README.md)** | clis | ONES 版 glab：webapi 直连读写工单/评论/工时（`ones ticket/comment/hours/doctor/auth`），Bearer 直连免浏览器，refresh 自动续期，npm run link:ones 注册全局命令 |
+| **[ones](suites/ones/README.md)** | suite | ONES 工单操作流：`/ones:init`（含认证）、`read`、`comment`、`hours`、`wrapup` 5 个命令 + `ones-core` 技能；可逆直发/不可逆确认两档写安全、工单上下文自动识别、AI 内容标识；依赖 ones CLI |
+| **[session-keeper](suites/session-keeper/README.md)** | suite | 会话体验守护：当前提供标题自动维护（`UserPromptSubmit` hook 每轮提醒 + 技能判定漂移并改写，支持 ONES 单号前缀），后续可扩展会话状态等能力 |
 | **[settings](settings/README.md)** | settings | 多模型切换（`_base.json` + profiles 合并）+ 全局 `CLAUDE.md` 部署（`deploy settings`） |
 | **[gitinit](gitinit/README.md)** | gitinit | `~/.claude` 本地 git 追踪：`claude-lab gitinit` 覆盖 `.gitignore`（同 switch 覆盖 settings.json），追踪 deploy/switch 的文件变化 |
 
@@ -126,7 +130,7 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 
 | 模块 / 方向 | 说明 |
 | --- | --- |
-| **hooks 落地** | 部署后自动核对一致性、提交前提醒等自动化 hook |
+| **hooks 扩展** | 会话守护已落地（`session-keeper`）；后续：会话状态更新、部署后一致性核对、提交前提醒等自动化 hook |
 | **agents 子代理** | 规范审查专用代理，主对话只拿结论，省上下文 |
 | **workflows 编排** | 批量重构 / 批量规范审查等多 agent 并行场景 |
 | **AI 辅助自动化测试 / Skill 评测** | 三层混合架构：语义化标签 + Page Object + AI 只做维护，见 [plans/ai-assisted-testing.md](project-docs/plans/ai-assisted-testing.md)（未来研究，需被测项目有测试框架） |

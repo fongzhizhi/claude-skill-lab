@@ -849,6 +849,22 @@ function expandHomePath(value) {
   return path.normalize(expanded);
 }
 
+// 递归展开配置中的 {HOME} 占位符（hooks 的 args 需要绝对路径，且 profile 要跨机器可移植）
+function expandHomeInConfig(value) {
+  if (typeof value === "string") {
+    return value.replace(/\{HOME\}/g, HOME);
+  }
+  if (Array.isArray(value)) {
+    return value.map(expandHomeInConfig);
+  }
+  if (value && typeof value === "object") {
+    for (const key of Object.keys(value)) {
+      value[key] = expandHomeInConfig(value[key]);
+    }
+  }
+  return value;
+}
+
 // 校验 profile 并合并 _base.json + <profile>.json，返回合并后的配置对象
 function buildProfileConfig(profile) {
   const settingsDir = path.join(ROOT, "settings");
@@ -885,6 +901,11 @@ function buildProfileConfig(profile) {
   }
 
   const merged = deepMerge(base, override);
+
+  // hooks 支持 {HOME}：switch 写入 settings.json 前展开，保证 hook 脚本路径可移植
+  if (merged.hooks) {
+    merged.hooks = expandHomeInConfig(merged.hooks);
+  }
 
   // permissions.additionalDirectories 支持 {HOME} / 开头 ~，
   // 写入前展开为绝对路径，保证 profile 跨用户、跨机器可移植

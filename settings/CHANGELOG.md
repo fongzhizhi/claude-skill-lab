@@ -2,6 +2,12 @@
 
 <!-- 记录 settings/ 下的每次配置变更。 -->
 
+## 2026-11-06
+
+- `profiles/_base.json` 新增 `hooks.UserPromptSubmit`：以 exec 形式（`command: "node"` + `args`）注册 `session-keeper` 的每轮标题检查 hook，`args` 使用 `{HOME}` 占位
+- `claude-lab switch` 的 `{HOME}` 展开从仅 `permissions.additionalDirectories` 扩展到 `hooks`（递归展开对象/数组中的字符串），保证 hook 脚本路径跨用户、跨机器可移植，且切换 profile 不会丢失 hook 注册
+- 理由：`switch` 是整体覆盖写入 `~/.claude/settings.json`，hook 若只写本地会在下次切 profile 时被冲掉；与 mcpServers 同理，hooks 统一放基座
+
 ## 2026-11-03
 
 - `profiles/_base.json` 的 `permissions.additionalDirectories` 由硬编码 `C:\Users\win10\.claude` 改为 `{HOME}/.claude`：原路径与当前用户 `jiangshun` 不符，换用户名/换机器即失效

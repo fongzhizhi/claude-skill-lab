@@ -57,6 +57,22 @@
       "Write(**/id_rsa*)"
     ]
   },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "{HOME}/.claude/hooks/session-keeper.js"
+            ],
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
   "mcpServers": {
     "chrome-devtools": {
       "command": "npx",
