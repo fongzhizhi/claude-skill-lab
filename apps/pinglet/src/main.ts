@@ -151,6 +151,10 @@ const listElement = requireElement<HTMLDivElement>("#session-list");
 const errorBarElement = requireElement<HTMLDivElement>("#error-bar");
 const summaryElement = requireElement<HTMLSpanElement>("#summary");
 const logoElement = requireElement<SVGElement>(".logo");
+const logoPendingElement = requireElement<SVGPathElement>("#logo-pending");
+const logoInterruptedElement =
+  requireElement<SVGPathElement>("#logo-interrupted");
+const logoRunningElement = requireElement<SVGCircleElement>("#logo-running");
 const heartbeatElement = requireElement<HTMLSpanElement>("#heartbeat");
 const heartbeatTextElement = requireElement<HTMLSpanElement>("#heartbeat-text");
 const footerGapElement = requireElement<HTMLElement>(".footer-gap");
@@ -506,6 +510,7 @@ function renderRows(rows: SessionRow[]): void {
     (row) => classify(row) === "working",
   ).length;
   renderSummary(blockedCount, interruptedCount, workingCount);
+  renderLogoState(blockedCount, interruptedCount, workingCount);
 
   const reminderEvent = detectStateChange(sortedRows);
   if (reminderEvent !== null) {
@@ -515,6 +520,17 @@ function renderRows(rows: SessionRow[]): void {
       triggerCompletionReminder();
     }
   }
+}
+
+/** Logo 只做静态状态映射：三层图形分别对应待处理、已中断、进行中，不做闪烁动画。 */
+function renderLogoState(
+  blockedCount: number,
+  interruptedCount: number,
+  workingCount: number,
+): void {
+  logoPendingElement.classList.toggle("active", blockedCount > 0);
+  logoInterruptedElement.classList.toggle("active", interruptedCount > 0);
+  logoRunningElement.classList.toggle("active", workingCount > 0);
 }
 
 function renderSummary(

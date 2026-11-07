@@ -10,7 +10,7 @@
   --font-size-base: 14px;
 
   /* 基础 */
-  --color-bg: #18181b;
+  --color-bg-rgb: 24, 24, 27;
   --color-text-main: #f4f4f5;
   --color-text-sub: #a1a1aa;
 
@@ -49,6 +49,9 @@
   --color-toggle-knob: #f4f4f5;
   --color-danger: #ff6b6b;
   --color-focus: rgba(255, 255, 255, 0.55);
+
+  /* 面板背景不透明度（= 1 - 透明度）：设置面板滑块写入，只影响背景，文字与图标保持不透明 */
+  --panel-opacity: 1;
 }
 
 :root[data-font-size="small"] {
@@ -66,7 +69,7 @@
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --color-bg: #ffffff;
+  --color-bg-rgb: 255, 255, 255;
   --color-text-main: #18181b;
   --color-text-sub: #71717a;
 
@@ -122,8 +125,8 @@ body {
 
 body {
   overflow: hidden;
-  font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui,
-    sans-serif;
+  font-family:
+    "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
   font-size: var(--font-size-base);
   color: var(--color-text-main);
   -webkit-font-smoothing: antialiased;
@@ -147,7 +150,7 @@ input {
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  background: var(--color-bg);
+  background: rgba(var(--color-bg-rgb), var(--panel-opacity));
   box-shadow: 0 16px 48px var(--color-shadow);
 }
 
@@ -329,10 +332,27 @@ input {
   flex: none;
   width: 1.5em;
   height: 1.5em;
-  color: var(--color-text-main);
 }
 
-.logo-dot {
+/* 三层图形各自映射状态：默认保留状态色但降低透明度，激活后完全点亮；只有过渡，没有动画 */
+.logo-part {
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+.logo-part.active {
+  opacity: 1;
+}
+
+#logo-pending {
+  stroke: var(--color-state-pending);
+}
+
+#logo-interrupted {
+  stroke: var(--color-state-interrupted);
+}
+
+#logo-running {
   fill: var(--color-state-running);
 }
 
@@ -711,6 +731,12 @@ input {
   background: var(--color-settings-bg);
   box-shadow: 0 18px 48px var(--color-shadow);
   overscroll-behavior: contain;
+  user-select: none;
+}
+
+/* 快捷键输入框保留文本选择能力 */
+.settings-panel input[type="text"] {
+  user-select: text;
 }
 
 .settings-header {
@@ -810,6 +836,7 @@ input {
 
 .segmented-btn:focus-visible,
 .check-row:focus-within,
+.transparency-slider:focus-visible,
 .reset-btn:focus-visible,
 .quit-btn:focus-visible,
 .settings-back-btn:focus-visible {
@@ -817,11 +844,34 @@ input {
   outline-offset: 1px;
 }
 
+.transparency-control {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.transparency-slider {
+  width: calc(var(--font-size-base) * 5.8);
+  margin: 0;
+  accent-color: var(--color-text-sub);
+  cursor: pointer;
+}
+
+.transparency-value {
+  flex: none;
+  min-width: calc(var(--font-size-base) * 2.4);
+  color: var(--color-text-sub);
+  font-size: calc(var(--font-size-base) * 0.85);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 .reminder-group {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px 8px;
-  margin-top: 3px;
+  flex: none;
+  grid-template-columns: auto auto;
+  gap: 2px 10px;
 }
 
 .check-row {
@@ -846,14 +896,6 @@ input {
   margin: 0;
   accent-color: var(--color-state-running);
   cursor: pointer;
-}
-
-.settings-hint {
-  margin: 6px 0 0;
-  color: var(--color-text-sub);
-  font-size: calc(var(--font-size-base) * 0.81);
-  line-height: 1.5;
-  opacity: 0.75;
 }
 
 .switch {
@@ -1105,15 +1147,13 @@ body.browser-preview {
   overflow: auto;
   background:
     radial-gradient(circle at 18% 18%, #1e293b, transparent 46%),
-    radial-gradient(circle at 82% 78%, #172554, transparent 44%),
-    #0b0b0e;
+    radial-gradient(circle at 82% 78%, #172554, transparent 44%), #0b0b0e;
 }
 
 :root[data-theme="light"] body.browser-preview {
   background:
     radial-gradient(circle at 18% 18%, #dbeafe, transparent 46%),
-    radial-gradient(circle at 82% 78%, #e0e7ff, transparent 44%),
-    #f1f5f9;
+    radial-gradient(circle at 82% 78%, #e0e7ff, transparent 44%), #f1f5f9;
 }
 
 body.browser-preview .panel {

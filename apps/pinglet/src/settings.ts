@@ -1,6 +1,6 @@
 /**
  * @ai-generated deepseek-v4-flash
- * 设置模型与持久化：暗色/亮色主题、字号、提醒模式、关闭行为、鼠标穿透、开机自启、快捷键与窗口固定状态。
+ * 设置模型与持久化：暗色/亮色主题、字号、面板透明度、提醒模式、关闭行为、鼠标穿透、开机自启、快捷键与窗口固定状态。
  * 全部设置只写入本机 WebView 的 localStorage，不触碰 Claude 配置。
  */
 
@@ -15,6 +15,8 @@ export type Reminders = Record<ReminderKey, boolean>;
 export type Settings = {
   theme: ThemeMode;
   fontSize: FontSize;
+  /** 面板背景透明度：0–0.7，0 为完全不透明 */
+  transparency: number;
   reminders: Reminders;
   closeToTray: boolean;
   clickThrough: boolean;
@@ -28,6 +30,10 @@ const DEFAULT_SHORTCUT = "Alt+Shift+P";
 const SHORTCUT_MAX_LENGTH = 64;
 const THEME_DARK: ThemeMode = "dark";
 const FONT_SIZE_STANDARD: FontSize = "standard";
+export const PANEL_TRANSPARENCY_MIN = 0;
+export const PANEL_TRANSPARENCY_MAX = 0.7;
+export const PANEL_TRANSPARENCY_STEP = 0.05;
+const DEFAULT_PANEL_TRANSPARENCY = PANEL_TRANSPARENCY_MIN;
 const FONT_SIZES: ReadonlySet<FontSize> = new Set([
   "small",
   "standard",
@@ -45,6 +51,7 @@ function createDefaultSettings(): Settings {
   return {
     theme: THEME_DARK,
     fontSize: FONT_SIZE_STANDARD,
+    transparency: DEFAULT_PANEL_TRANSPARENCY,
     reminders: { ...DEFAULT_REMINDERS },
     closeToTray: false,
     clickThrough: false,
@@ -85,6 +92,16 @@ export function setFontSize(fontSize: FontSize): void {
     return;
   }
   settings.fontSize = fontSize;
+  persist();
+  notify();
+}
+
+export function setTransparencySetting(transparency: number): void {
+  const normalized = normalizePanelTransparency(transparency);
+  if (settings.transparency === normalized) {
+    return;
+  }
+  settings.transparency = normalized;
   persist();
   notify();
 }
@@ -178,6 +195,23 @@ export function applyFontSize(fontSize: FontSize): void {
   document.documentElement.dataset.fontSize = fontSize;
 }
 
+/** 透明度与 CSS 不透明度互为倒数：滑块越大，面板背景越透。 */
+export function applyPanelTransparency(transparency: number): void {
+  const alpha = Math.round((1 - transparency) * 100) / 100;
+  document.documentElement.style.setProperty("--panel-opacity", String(alpha));
+}
+
+/** 限制到滑块范围并吸附到 5% 步进，避免浮点误差影响比较与持久化。 */
+function normalizePanelTransparency(transparency: number): number {
+  const clamped = Math.min(
+    PANEL_TRANSPARENCY_MAX,
+    Math.max(PANEL_TRANSPARENCY_MIN, transparency),
+  );
+  const stepped =
+    Math.round(clamped / PANEL_TRANSPARENCY_STEP) * PANEL_TRANSPARENCY_STEP;
+  return Math.round(stepped * 100) / 100;
+}
+
 function readStorage(key: string): string | null {
   try {
     return window.localStorage.getItem(key);
@@ -242,6 +276,11 @@ function parseSettings(raw: string | null): Settings {
         typeof fontSize === "string" && FONT_SIZES.has(fontSize as FontSize)
           ? (fontSize as FontSize)
           : fallback.fontSize,
+      transparency:
+        typeof value.transparency === "number" &&
+        Number.isFinite(value.transparency)
+          ? normalizePanelTransparency(value.transparency)
+          : fallback.transparency,
       reminders: parseReminders(value.reminders),
       closeToTray:
         typeof value.closeToTray === "boolean"
@@ -279,6 +318,7 @@ function persist(): void {
 function notify(): void {
   applyTheme(settings.theme);
   applyFontSize(settings.fontSize);
+  applyPanelTransparency(settings.transparency);
   for (const listener of listeners) {
     try {
       listener();
@@ -290,3 +330,4 @@ function notify(): void {
 
 applyTheme(settings.theme);
 applyFontSize(settings.fontSize);
+applyPanelTransparency(settings.transparency);

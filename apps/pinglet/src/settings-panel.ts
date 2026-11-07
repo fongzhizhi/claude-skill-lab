@@ -1,9 +1,12 @@
 /**
  * @ai-generated deepseek-v4-flash
- * 设置面板：主题、字号、提醒模式、系统行为、鼠标穿透、快捷键与关于信息。
+ * 设置面板：主题、字号、面板透明度、通知、系统行为、鼠标穿透、快捷键与关于信息。
  */
 import {
   getSettings,
+  PANEL_TRANSPARENCY_MAX,
+  PANEL_TRANSPARENCY_MIN,
+  PANEL_TRANSPARENCY_STEP,
   setAutoStartSetting,
   setClickThroughSetting,
   setCloseToTraySetting,
@@ -11,6 +14,7 @@ import {
   setReminder,
   setShortcutSetting,
   setTheme,
+  setTransparencySetting,
   subscribeSettings,
   type FontSize,
   type ReminderKey,
@@ -267,11 +271,8 @@ function acceleratorFromEvent(event: KeyboardEvent): string | null {
   return [...modifiers, key].join("+");
 }
 
-function createHint(text: string): HTMLParagraphElement {
-  const hint = document.createElement("p");
-  hint.className = "settings-hint";
-  hint.textContent = text;
-  return hint;
+function formatTransparency(transparency: number): string {
+  return `${Math.round(transparency * 100)}%`;
 }
 
 export function mountSettingsPanel(
@@ -328,6 +329,32 @@ export function mountSettingsPanel(
   fontSizeRow.row.append(fontSizeControl);
   appearanceSection.append(fontSizeRow.row);
 
+  const transparencyRow = createSettingRow("透明度");
+  const transparencyControl = document.createElement("div");
+  transparencyControl.className = "transparency-control";
+
+  const transparencySlider = document.createElement("input");
+  transparencySlider.type = "range";
+  transparencySlider.className = "transparency-slider";
+  transparencySlider.min = String(Math.round(PANEL_TRANSPARENCY_MIN * 100));
+  transparencySlider.max = String(Math.round(PANEL_TRANSPARENCY_MAX * 100));
+  transparencySlider.step = String(Math.round(PANEL_TRANSPARENCY_STEP * 100));
+  transparencySlider.value = String(Math.round(initial.transparency * 100));
+  transparencySlider.setAttribute("aria-label", "面板透明度");
+
+  const transparencyValue = document.createElement("span");
+  transparencyValue.className = "transparency-value";
+  transparencyValue.textContent = formatTransparency(initial.transparency);
+
+  transparencySlider.addEventListener("input", () => {
+    setTransparencySetting(Number(transparencySlider.value) / 100);
+  });
+
+  transparencyControl.append(transparencySlider, transparencyValue);
+  transparencyRow.row.append(transparencyControl);
+  appearanceSection.append(transparencyRow.row);
+
+  const reminderRow = createSettingRow("通知");
   const reminderGroup = document.createElement("div");
   reminderGroup.className = "reminder-group";
   const reminderInputs: HTMLInputElement[] = [];
@@ -340,7 +367,8 @@ export function mountSettingsPanel(
     reminderInputs.push(input);
     reminderGroup.append(row);
   }
-  appearanceSection.append(reminderGroup);
+  reminderRow.row.append(reminderGroup);
+  appearanceSection.append(reminderRow.row);
   fragment.append(appearanceSection);
 
   // ============ 系统与行为 ============
@@ -389,13 +417,6 @@ export function mountSettingsPanel(
     },
   );
   systemSection.append(clickThroughRow.row);
-  if (IS_TAURI) {
-    systemSection.append(
-      createHint(
-        "开启后在设置面板关闭时生效；生效后窗口不响应鼠标，右键托盘图标 →「鼠标穿透」取消勾选，或按全局快捷键恢复。",
-      ),
-    );
-  }
 
   const shortcutRow = createSettingRow("全局快捷键");
   const shortcutInput = document.createElement("input");
@@ -414,11 +435,6 @@ export function mountSettingsPanel(
   status.setAttribute("role", "status");
   systemSection.append(status);
 
-  if (IS_TAURI) {
-    systemSection.append(
-      createHint("聚焦快捷键输入框后按下组合键；Backspace 可清除。"),
-    );
-  }
   fragment.append(systemSection);
 
   // ============ 关于 ============
@@ -563,6 +579,8 @@ export function mountSettingsPanel(
 
     syncSegmentedControl(themeControl, current.theme);
     syncSegmentedControl(fontSizeControl, current.fontSize);
+    transparencySlider.value = String(Math.round(current.transparency * 100));
+    transparencyValue.textContent = formatTransparency(current.transparency);
 
     for (const input of reminderInputs) {
       const key = input.dataset.reminderKey as ReminderKey;
