@@ -32,7 +32,6 @@
 | **单模块**       | 单一类型、`dist/` 全量镜像、零配置                                                                      | 一个技能、一个斜杠命令      |
 | **聚合套件**     | 多文件、可混合类型、`manifest.json` 声明映射                                                            | OpenSpec 工具集、工作流系统 |
 | **独立 CLI**     | [`clis/<name>/`](clis/README.md)，`npm run link:<name>` 注册全局命令（不走 lab deploy，改代码即时生效） | ones CLI（ONES 版 glab）    |
-| **独立桌面应用** | [`apps/<name>/`](apps/README.md)，各自独立构建（如 Tauri），产物是安装包，lab CLI 不感知                | 未来的自研桌面应用          |
 
 > 目录结构、模块规范与部署细节见 [project-docs/design.md](project-docs/design.md)。
 
@@ -127,13 +126,13 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | **[settings](settings/README.md)**                                  | settings | 多模型切换（`_base.json` + profiles 合并）+ 全局 `CLAUDE.md` 部署（`deploy settings`）                                                                                                   |
 | **[gitinit](gitinit/README.md)**                                    | gitinit  | `~/.claude` 本地 git 追踪：`claude-lab gitinit` 覆盖 `.gitignore`（同 switch 覆盖 settings.json），追踪 deploy/switch 的文件变化                                                         |
 
-### 🟢 独立应用（apps/）
+### 🟢 独立应用
 
 | 应用                                                   | 状态                   | 说明                                                               |
 | ------------------------------------------------------ | ---------------------- | ------------------------------------------------------------------ |
 | **[Pinglet](https://github.com/fongzhizhi/pinglet)**    | v1.3 可用（独立仓库）  | 置顶常驻小窗，聚合所有 Claude Code 会话状态；已迁移至独立仓库维护  |
 
-> Pinglet 已迁出为独立仓库；`apps/` 保留自研应用的约定与索引，供未来应用使用。
+> Pinglet 已迁出为独立仓库；本仓库不再存放独立应用源码。
 
 ### 🟡 规划中
 

@@ -70,14 +70,13 @@ claude-lab gitinit            # 覆盖 ~/.claude/.gitignore（来自 gitinit/.gi
 
 顶层 `manifest.json` 的 `types` 映射模块类型 → `~/.claude/` 目标路径。新增模块类型 = 建顶层目录 + 在 `types` 加一条映射，CLI 代码零改动。注意：`lab/index.js` 内嵌的 `TYPES` 与 `DIST_FILE_MAP` 是部署逻辑的事实来源，与顶层 manifest.json 需保持一致。
 
-### clis/ 与 apps/：非 lab 管理的工具目录
+### clis/：非 lab 管理的工具目录
 
-两个顶层目录存放自研工具，**不进入 lab 的模块体系**：
+`clis/` 存放自研 CLI 工具，**不进入 lab 的模块体系**：
 
 - `clis/<name>/` — 自研 CLI 工具（如 ones CLI），`npm run link:<name>` 注册全局命令，改代码即时生效
-- `apps/<name>/` — 自研 GUI / 桌面应用，各自独立构建链（如 Tauri），产物是安装包而非 `~/.claude/` 下的文件
 
-共同约束：不加入顶层 `manifest.json` 的 `types`，也不加入 `lab/index.js` 的 `TYPES`——`claude-lab list` / `status` / `deploy --all` 均不感知。它们的终点不是 `~/.claude/` 镜像，而是「用户自行安装并运行的程序」，因此不适用 `dist/` 约定。
+约束：不加入顶层 `manifest.json` 的 `types`，也不加入 `lab/index.js` 的 `TYPES`——`claude-lab list` / `status` / `deploy --all` 均不感知。它的终点不是 `~/.claude/` 镜像，而是注册到 PATH 的全局命令，因此不适用 `dist/` 约定。
 
 ### settings/ 配置模块
 

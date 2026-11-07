@@ -476,7 +476,6 @@ Transition: id, name, toStatus, requiredFields           # 后续
 ## 十、参考
 
 - [gitflow 计划](gitflow.md)
-- [pinglet（会话状态看板）](https://github.com/fongzhizhi/pinglet) —— 已迁移至独立仓库
 - [gitflow README](../../suites/gitflow/README.md)
 - [ones-parser](../../skills/ones-parser/README.md)
 - [CLAUDE.md](../../CLAUDE.md)

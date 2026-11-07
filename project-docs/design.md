@@ -174,10 +174,6 @@ claude-skill-lab/
 │   └── <name>/
 │       └── README.md
 │
-├── apps/                        自研桌面应用（不参与 lab 部署，各自独立构建）
-│   └── <name>/
-│       └── README.md
-│
 └── settings/                    配置类 → ~/.claude/ + VSCode
     ├── README.md                配置决策说明
     ├── CHANGELOG.md             配置变更历史
