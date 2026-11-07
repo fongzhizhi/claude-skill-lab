@@ -32,7 +32,7 @@
 | **单模块**       | 单一类型、`dist/` 全量镜像、零配置                                                                      | 一个技能、一个斜杠命令      |
 | **聚合套件**     | 多文件、可混合类型、`manifest.json` 声明映射                                                            | OpenSpec 工具集、工作流系统 |
 | **独立 CLI**     | [`clis/<name>/`](clis/README.md)，`npm run link:<name>` 注册全局命令（不走 lab deploy，改代码即时生效） | ones CLI（ONES 版 glab）    |
-| **独立桌面应用** | [`apps/<name>/`](apps/README.md)，各自独立构建（如 Tauri），产物是安装包，lab CLI 不感知                | 会话状态看板                |
+| **独立桌面应用** | [`apps/<name>/`](apps/README.md)，各自独立构建（如 Tauri），产物是安装包，lab CLI 不感知                | 未来的自研桌面应用          |
 
 > 目录结构、模块规范与部署细节见 [project-docs/design.md](project-docs/design.md)。
 
@@ -129,9 +129,11 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 
 ### 🟢 独立应用（apps/）
 
-| 应用                                  | 状态     | 说明                                                                                                            |
-| ------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------- |
-| **[Pinglet](apps/pinglet/README.md)** | v1.3 可用 | 置顶常驻小窗，聚合所有 Claude Code 会话状态；重点提示待处理（红色）与已中断（黄色），双击行打开对应 VSCode 目录或终端 |
+| 应用                                                   | 状态                   | 说明                                                               |
+| ------------------------------------------------------ | ---------------------- | ------------------------------------------------------------------ |
+| **[Pinglet](https://github.com/fongzhizhi/pinglet)**    | v1.3 可用（独立仓库）  | 置顶常驻小窗，聚合所有 Claude Code 会话状态；已迁移至独立仓库维护  |
+
+> Pinglet 已迁出为独立仓库；`apps/` 保留自研应用的约定与索引，供未来应用使用。
 
 ### 🟡 规划中
 
@@ -176,6 +178,7 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 - [Claude Code 官方文档](https://code.claude.com/docs)
 - [Agent Skills 开放标准](https://agentskills.io)
 - [OpenSpec](https://github.com/Fission-AI/OpenSpec) —— 聚合套件参考案例
+- [Pinglet](https://github.com/fongzhizhi/pinglet) —— Claude Code 会话状态看板（Tauri 桌面应用），从本仓库孵化后独立维护
 - 设计文档：[project-docs/design.md](project-docs/design.md)（面向贡献者 / 进阶用户）
 
 _MIT License._
