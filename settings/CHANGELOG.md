@@ -2,6 +2,12 @@
 
 <!-- 记录 settings/ 下的每次配置变更。 -->
 
+## 2026-11-07
+
+- `profiles/_base.json` 的 `permissions.allow` 新增裸 `PowerShell`：Windows 下 Claude Code 使用 PowerShell 工具执行命令时不再逐条弹权限确认，与裸 `Bash` 的整工具放行对齐
+- 本地 `~/.claude/settings.json` 由 `claude-lab switch deepseek` 重新生成同步（`ANTHROPIC_AUTH_TOKEN` 按占位符保护机制沿用原值）
+- 说明：`permissions.deny` 仍为 Bash 专用规则，PowerShell 侧暂无对应危险命令拦截；如需对称防护，可后续补充 `PowerShell(...)` deny 规则
+
 ## 2026-11-06
 
 - `profiles/_base.json` 新增 `hooks.UserPromptSubmit`：以 exec 形式（`command: "node"` + `args`）注册 `session-keeper` 的每轮标题检查 hook，`args` 使用 `{HOME}` 占位

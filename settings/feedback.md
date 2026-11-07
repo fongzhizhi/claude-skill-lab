@@ -2,6 +2,12 @@
 
 <!-- 记录配置使用过程中发现的问题与改进建议。 -->
 
+## 2026-11-07（PowerShell 权限）
+
+- 现象：`permissions.allow` 仅放行裸 `Bash`，Git Bash 执行不再弹窗，但 Windows 下切到 PowerShell 工具仍逐条确认
+- 采纳：allow 增加裸 `PowerShell`，与 `Bash` 同为整工具放行
+- 注意：deny 列表仍只有 `Bash(...)` 规则，`Remove-Item -Recurse -Force` 等 PowerShell 破坏性命令不会被现有 deny 命中；若需要对称防护，应补充对应 `PowerShell(...)` deny
+
 ## 2026-11-03（additionalDirectories 可移植）
 
 - 现象：为让 `/gitflow:init` 直接写入 `~/.claude/gitflow.json`，在 `_base.json` 加入 `permissions.additionalDirectories: ["C:\\Users\\win10\\.claude"]`；该路径硬编码用户名，且与当前机器实际用户 `jiangshun` 不符，换账号/换机器即失效
