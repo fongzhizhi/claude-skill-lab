@@ -27,7 +27,7 @@
   "editor.formatOnType": false,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit",
-    "source.organizeImports": "explicit",
+    "source.organizeImports": "explicit"
   },
   "files.insertFinalNewline": true,
   "files.trimFinalNewlines": true,
@@ -92,6 +92,7 @@
   "claudeCode.useTerminal": true,
   "claudeCode.disableLoginPrompt": true,
   "claudeCode.initialPermissionMode": "acceptEdits",
+  "claudeCode.lockEditorGroups": false,
 
   // ============================================
   // 8. 其他增强
@@ -102,5 +103,5 @@
   "breadcrumbs.enabled": true,
   "problems.showCurrentInStatus": true,
   "security.workspace.trust.untrustedFiles": "open",
-  "explorer.confirmPasteNative": false,
+  "explorer.confirmPasteNative": false
 }

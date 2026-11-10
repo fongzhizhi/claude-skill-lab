@@ -39,7 +39,8 @@
       "ExitPlanMode",
       "WebFetch",
       "WebSearch",
-      "mcp__cdp__*"
+      "mcp__cdp__*",
+      "mcp__claude-vscode__*"
     ],
     "additionalDirectories": [
       "{HOME}/.claude"
