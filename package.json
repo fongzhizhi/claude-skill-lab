@@ -10,10 +10,11 @@
   "scripts": {
     "link": "npm link",
     "unlink": "npm unlink -g",
-    "link:ones": "cd clis/ons && npm link",
-    "unlink:ones": "cd clis/ons && npm unlink -g ones-cli",
+    "link:ones": "cd clis/ones && npm link",
+    "unlink:ones": "cd clis/ones && npm unlink -g ones-cli",
     "lab": "node lab/index.js",
     "gitinit": "node lab/index.js gitinit",
+    "vscode": "node lab/index.js vscode",
     "list": "node lab/index.js list",
     "status": "node lab/index.js status",
     "deploy": "node lab/index.js deploy",

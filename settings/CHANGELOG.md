@@ -2,6 +2,18 @@
 
 <!-- 记录 settings/ 下的每次配置变更。 -->
 
+## 2026-11-10
+
+- `vscode/settings.json` 的 `claudeCode.useTerminal` 由 `true` 改为 `false`：切换到 Claude Code 原生 UI 模式，`claude-vscode.*` 命令的快捷键（如 `ctrl+alt+n` 打开编辑器面板）才会生效
+- 新增 `vscode/keybindings.json`，作为 VSCode 自定义快捷键的仓库记录源：
+  - `ctrl+shift+c`（编辑器/非编辑器上下文）复制相对路径，并解绑默认的 `ctrl+k ctrl+shift+c`
+  - `ctrl+alt+n` 在原生 UI 下打开 Claude Code 编辑器面板，同时解绑默认的 `ctrl+shift+escape`
+  - `ctrl+k r` 关闭右侧编辑器组、`ctrl+k o` 关闭其他编辑器
+  - 保留既有的终端 `shift+enter` 发送 ESC+CR
+- 顶层 `manifest.json` 与 `project-docs/design.md` 补充 `vscode/keybindings.json` 的 `{VSCodeKeybindings}` 目标映射
+- 新增 `claude-lab vscode` 命令：把 `settings/vscode/*` 同步到本地 VSCode User 目录（按平台解析：Windows `%APPDATA%/Code/User`、macOS `~/Library/Application Support/Code/User`、Linux `~/.config/Code/User`），`--check` 仅检查差异并以退出码 1 表示不一致；`package.json` 同步新增 `npm run vscode` 薄封装
+- 设计取舍：VSCode 配置不并入 `deploy settings` / `deploy --all`，避免一键部署时误覆盖编辑器本地设置；`vscode/` 为纯静态覆盖，不做 JSONC 合并
+
 ## 2026-11-07
 
 - `profiles/_base.json` 的 `permissions.allow` 新增裸 `PowerShell`：Windows 下 Claude Code 使用 PowerShell 工具执行命令时不再逐条弹权限确认，与裸 `Bash` 的整工具放行对齐

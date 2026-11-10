@@ -34,7 +34,8 @@
       "settings.json": "{HOME}/.claude/settings.json",
       "CLAUDE.md": "{HOME}/.claude/CLAUDE.md",
       "profiles/*.json": "{HOME}/.claude/profiles/",
-      "vscode/settings.json": "{VSCodeSettings}"
+      "vscode/settings.json": "{VSCodeSettings}",
+      "vscode/keybindings.json": "{VSCodeKeybindings}"
     }
   },
   "suites": {

@@ -25,9 +25,10 @@ claude-lab deploy --all       # 一键部署所有（--force 跳过依赖检查�
 claude-lab remove <name>      # 卸载
 claude-lab switch <profile>   # 切换模型配置（--ephemeral 仅当前会话，不写磁盘）
 claude-lab gitinit            # 覆盖 ~/.claude/.gitignore（来自 gitinit/.gitignore.template 模板，同 switch 覆盖 settings.json）
+claude-lab vscode             # 同步 settings/vscode/* 到本地 VSCode User 目录（--check 仅检查差异）
 ```
 
-仓库内也保留 npm 脚本薄封装：`npm run lab`（帮助）、`npm run deploy <name>`、`npm run switch <profile>`、`npm run list` / `status` / `remove` / `gitinit`。`npm run deploy --all` 无需 `--` 分隔符——CLI 会从 `npm_config_all`/`npm_config_force` 环境变量恢复 npm 消费掉的标志（见 `lab/index.js` 的 `main()`）；全局命令 `claude-lab deploy --all` 参数直传，天然无此问题。
+仓库内也保留 npm 脚本薄封装：`npm run lab`（帮助）、`npm run deploy <name>`、`npm run switch <profile>`、`npm run list` / `status` / `remove` / `gitinit` / `vscode`。`npm run deploy --all` 无需 `--` 分隔符——CLI 会从 `npm_config_all`/`npm_config_force` 环境变量恢复 npm 消费掉的标志（见 `lab/index.js` 的 `main()`）；全局命令 `claude-lab deploy --all` 参数直传，天然无此问题。
 
 ## 架构
 

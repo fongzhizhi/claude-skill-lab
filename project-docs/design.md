@@ -8,6 +8,7 @@
 
 | 版本 | 日期       | 变更说明                                                                                                                                                                 |
 | ---- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| v2.3 | 2026-11-10 | VSCode 配置接入同步命令：新增 `claude-lab vscode`（`--check`），将 `settings/vscode/*` 静态覆盖到平台对应的 VSCode User 目录；不并入 `deploy --all`，避免误覆盖编辑器本地配置。       |
 | v2.2 | 2026-11-03 | settings 模块接入 deploy：`settings/CLAUDE.md` 收编全局个人指令，`claude-lab deploy settings` 静态部署到 `~/.claude/CLAUDE.md`；`settings.json` 仍由 switch 管理。       |
 | v2.1 | 2026-08-11 | 新增 `docs/` 模块类型（参考文档 → `~/.claude/docs/`）；项目说明文档迁移至 `project-docs/`；新增 `rules/ts-standards` TS 规则模块（含 5 条规则与 docs 软依赖检查）。      |
 | v2.0 | 2026-08-09 | 新增聚合套件（`suites/`）支持；统一所有模块成品存放于 `dist/` 目录；重构部署逻辑支持单模块与套件两种模式；更新 `manifest.json` 结构；引入套件内部 `manifest.json` 规范。 |
@@ -187,7 +188,8 @@ claude-skill-lab/
     │   ├── zhipu.json
     │   └── company.json
     └── vscode/
-        └── settings.json        VSCode 用户配置
+        ├── settings.json        VSCode 用户配置
+        └── keybindings.json     VSCode 自定义快捷键
 ```
 
 ---
@@ -335,7 +337,8 @@ settings/
 │   ├── zhipu.json
 │   └── company.json
 └── vscode/
-    └── settings.json        VSCode 用户配置
+    ├── settings.json        VSCode 用户配置
+    └── keybindings.json     VSCode 自定义快捷键
 ```
 
 ### 设计原则
@@ -352,9 +355,10 @@ settings/
 | `settings/CLAUDE.md` | `claude-lab deploy settings` / `deploy --all` | `~/.claude/CLAUDE.md` | 纯静态复制；`status` 做字节一致性检查；不提供 `remove` |
 | `settings/profiles/*.json` | `claude-lab switch <profile>` | 合并结果写入 `~/.claude/settings.json` | profile 本身不落盘 |
 | `settings/settings.template.json` | 手动拷贝 | 仓库内 `settings/settings.json` | 不入仓，含真实 Key |
-| `settings/vscode/settings.json` | 暂未接入 | `{VSCodeSettings}` | 需另议解析与合并 |
+| `settings/vscode/settings.json` | `claude-lab vscode` | `{VSCodeSettings}` | 纯静态覆盖，不做 JSONC 合并 |
+| `settings/vscode/keybindings.json` | `claude-lab vscode` | `{VSCodeKeybindings}` | 同上 |
 
-`deploy settings` 的部署白名单由 `lab/index.js` 的 `SETTINGS_DEPLOY_FILES` 维护，与顶层 `manifest.json` 的 `settings.files` 保持一致：v1 仅激活 `CLAUDE.md`，`settings.json` 永久排除，`profiles/*` 与 `vscode/` 暂不激活。
+`deploy settings` 的部署白名单由 `lab/index.js` 的 `SETTINGS_DEPLOY_FILES` 维护，与顶层 `manifest.json` 的 `settings.files` 保持一致：v1 仅激活 `CLAUDE.md`，`settings.json` 永久排除，`profiles/*` 不落盘；`vscode/*` 由独立的 `claude-lab vscode` 同步，不进入 `deploy` 白名单，避免 `deploy --all` 误覆盖编辑器本地配置。
 
 ### 多模型切换机制（Profile Merge）
 
@@ -379,17 +383,27 @@ settings/
 
 ### VSCode 配置
 
-| 仓库位置                        | 目标位置（由 CLI 动态解析） |
-| ------------------------------- | --------------------------- |
-| `settings/vscode/settings.json` | `{VSCodeSettings}`          |
+| 仓库位置 | 目标位置（由 CLI 动态解析） |
+| --- | --- |
+| `settings/vscode/settings.json` | `{VSCodeSettings}` |
+| `settings/vscode/keybindings.json` | `{VSCodeKeybindings}` |
 
-`{VSCodeSettings}` 根据 `process.platform` 解析：
+同步命令：
 
-| 平台     | 解析结果                                                |
-| -------- | ------------------------------------------------------- |
-| `win32`  | `%APPDATA%/Code/User/settings.json`                     |
-| `darwin` | `~/Library/Application Support/Code/User/settings.json` |
-| `linux`  | `~/.config/Code/User/settings.json`                     |
+```bash
+claude-lab vscode           # settings/vscode/* → 本地 VSCode User 目录
+claude-lab vscode --check   # 仅检查差异，不一致时退出码为 1
+```
+
+文件按原样覆盖、不做合并；仅当内容不同（忽略 CRLF/LF）时写入。
+
+`{VSCodeSettings}` / `{VSCodeKeybindings}` 根据 `process.platform` 解析：
+
+| 平台     | `{VSCodeSettings}`                                      | `{VSCodeKeybindings}`                                   |
+| -------- | ------------------------------------------------------- | ------------------------------------------------------- |
+| `win32`  | `%APPDATA%/Code/User/settings.json`                     | `%APPDATA%/Code/User/keybindings.json`                  |
+| `darwin` | `~/Library/Application Support/Code/User/settings.json` | `~/Library/Application Support/Code/User/keybindings.json` |
+| `linux`  | `~/.config/Code/User/settings.json`                     | `~/.config/Code/User/keybindings.json`                  |
 
 ---
 
@@ -411,6 +425,8 @@ CLI 只做四件事：**部署模块**、**管理配置**、**信息查询**、*
 | `lab switch <profile>`             | 切换模型配置                             |
 | `lab switch <profile> --ephemeral` | 仅当前会话生效                           |
 | `lab remove [<type>/]<name>`       | 从 `~/.claude/` 中卸载已部署的模块或套件 |
+| `lab vscode`                       | 同步 `settings/vscode/*` 到本地 VSCode User 目录 |
+| `lab vscode --check`               | 仅检查 VSCode 配置差异（不一致退出码为 1） |
 
 ### 类型自动推断（冲突报错）
 
@@ -488,7 +504,7 @@ lab deploy suites/openspec    # 显式部署套件
 1. 定位到 `settings/`
 2. 按 `SETTINGS_DEPLOY_FILES` 白名单逐个复制（当前仅 `CLAUDE.md`）
 3. `CLAUDE.md` → `~/.claude/CLAUDE.md`，直接覆盖
-4. 跳过 `settings.json`（由 `switch` 生成）、`profiles/*` 与 `vscode/*`（暂未激活）
+4. 跳过 `settings.json`（由 `switch` 生成）与 `profiles/*`（不落盘）；`vscode/*` 由独立的 `lab vscode` 命令同步，不经过 `deploy`
 
 `lab status` 对白名单文件做逐字节比较，本地与仓库不一致时报告漂移；`lab remove settings` 会被拒绝，因为 `~/.claude/CLAUDE.md` 与 `settings.json` 属于个人环境本体。
 
@@ -539,7 +555,8 @@ lab deploy suites/openspec    # 显式部署套件
       "settings.json": "{HOME}/.claude/settings.json",
       "CLAUDE.md": "{HOME}/.claude/CLAUDE.md",
       "profiles/*.json": "{HOME}/.claude/profiles/",
-      "vscode/settings.json": "{VSCodeSettings}"
+      "vscode/settings.json": "{VSCodeSettings}",
+      "vscode/keybindings.json": "{VSCodeKeybindings}"
     }
   },
   "suites": {
@@ -564,10 +581,11 @@ lab deploy suites/openspec    # 显式部署套件
 
 `manifest.json` 中使用模板变量，`lab/index.js` 运行时根据 `process.platform` 解析。
 
-| 变量               | 解析规则                                     |
-| ------------------ | -------------------------------------------- |
-| `{HOME}`           | `os.homedir()`（由 CLI 解析，非 shell 展开） |
-| `{VSCodeSettings}` | 见下表                                       |
+| 变量                 | 解析规则                                     |
+| -------------------- | -------------------------------------------- |
+| `{HOME}`             | `os.homedir()`（由 CLI 解析，非 shell 展开） |
+| `{VSCodeSettings}`   | 见下表                                       |
+| `{VSCodeKeybindings}` | 见下表                                      |
 
 | 平台    | `process.platform` | 解析结果                                                     |
 | ------- | ------------------ | ------------------------------------------------------------ |

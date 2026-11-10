@@ -2,6 +2,12 @@
 
 <!-- 记录配置使用过程中发现的问题与改进建议。 -->
 
+## 2026-11-10（VSCode 原生 UI 与快捷键）
+
+- 现象：`claudeCode.useTerminal: true` 时 Claude Code 走终端 UI，`claude-vscode.*` 命令的快捷键不生效；切到原生 UI（`false`）后 `ctrl+alt+n` 等绑定才可用
+- 采纳：`vscode/settings.json` 改为 `useTerminal: false`；新增 `vscode/keybindings.json` 记录自定义快捷键（复制相对路径、打开 Claude 面板、关闭编辑器组等）
+- 采纳：新增 `claude-lab vscode` 命令替代手工复制，按平台解析 `{VSCodeSettings}` / `{VSCodeKeybindings}` 对应目录；`--check` 用于只读核对。不并入 `deploy --all`，避免一键部署误覆盖编辑器本地配置
+
 ## 2026-11-07（PowerShell 权限）
 
 - 现象：`permissions.allow` 仅放行裸 `Bash`，Git Bash 执行不再弹窗，但 Windows 下切到 PowerShell 工具仍逐条确认

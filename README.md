@@ -67,6 +67,9 @@ claude-lab switch deepseek       # 切换到 deepseek
 
 # 7. 初始化 ~/.claude 本地 git 追踪（可选，追踪 deploy/switch 的覆盖变化）
 claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
+
+# 8. 同步 VSCode 用户配置（修改 settings/vscode/ 后）
+claude-lab vscode                # settings/vscode/* → 本地 VSCode User 目录
 ```
 
 > **主流程是一键部署，而不是逐个部署。** 技能不是孤立的——`comment-keeper` / `test-keeper` 等运行时依赖 `docs/`（规范指南）与 `rules/`（强制规则）两个独立模块，`claude-lab deploy <name>` 只部署目标模块本身、不携带这些依赖；只有 `claude-lab deploy --all` 才把全部模块一次落位。**单独部署是开发完成后的迭代动作**：`/skill-forge` 改完某个模块后，只重新部署那一个，避免全量覆盖。仓库内也可用 npm 脚本薄封装：`npm run deploy <name>`、`npm run switch <profile>` 等（见下方指令参考）。
@@ -92,8 +95,10 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | `claude-lab switch <profile>`             | 切换模型配置                                                                                    |
 | `claude-lab switch <profile> --ephemeral` | 仅当前会话生效                                                                                  |
 | `claude-lab gitinit`                      | 覆盖 `~/.claude/.gitignore`（来自 `gitinit/.gitignore.template`，同 switch 覆盖 settings.json） |
+| `claude-lab vscode`                       | 同步 `settings/vscode/*` 到本地 VSCode User 目录                                                 |
+| `claude-lab vscode --check`               | 仅检查 VSCode 配置差异，不一致时退出码为 1                                                       |
 
-仓库内 npm 脚本为同一 CLI 的薄封装：`npm run lab`（帮助）、`npm run list` / `status` / `deploy <name>` / `remove <name>` / `switch <profile>`。`npm run deploy --all` 无需 `--` 分隔符（CLI 从 `npm_config_all` 等环境变量恢复标志）。
+仓库内 npm 脚本为同一 CLI 的薄封装：`npm run lab`（帮助）、`npm run list` / `status` / `deploy <name>` / `remove <name>` / `switch <profile>` / `vscode`。`npm run deploy --all` 无需 `--` 分隔符（CLI 从 `npm_config_all` 等环境变量恢复标志）。
 
 ## 当前状态
 
@@ -123,7 +128,7 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | **[ones CLI](clis/ones/README.md)**                                 | clis     | ONES 版 glab：webapi 直连读写工单/评论/工时（`ones ticket/comment/hours/doctor/auth`），Bearer 直连免浏览器，refresh 自动续期，npm run link:ones 注册全局命令                            |
 | **[ones](suites/ones/README.md)**                                   | suite    | ONES 工单操作流：`/ones:init`（含认证）、`read`、`comment`、`hours`、`wrapup` 5 个命令 + `ones-core` 技能；可逆直发/不可逆确认两档写安全、工单上下文自动识别、AI 内容标识；依赖 ones CLI |
 | **[session-keeper](suites/session-keeper/README.md)**               | suite    | 会话体验守护：当前提供标题自动维护（`UserPromptSubmit` hook 每轮提醒 + 技能判定话题变化并以最新话题改写，支持 ONES 单号前缀），后续可扩展会话状态等能力                                  |
-| **[settings](settings/README.md)**                                  | settings | 多模型切换（`_base.json` + profiles 合并）+ 全局 `CLAUDE.md` 部署（`deploy settings`）                                                                                                   |
+| **[settings](settings/README.md)**                                  | settings | 多模型切换（`_base.json` + profiles 合并）+ 全局 `CLAUDE.md` 部署（`deploy settings`）+ VSCode 配置同步（`claude-lab vscode`）                                                             |
 | **[gitinit](gitinit/README.md)**                                    | gitinit  | `~/.claude` 本地 git 追踪：`claude-lab gitinit` 覆盖 `.gitignore`（同 switch 覆盖 settings.json），追踪 deploy/switch 的文件变化                                                         |
 
 ### 🟢 独立应用
@@ -169,6 +174,7 @@ claude-lab gitinit               # git init（幂等）+ 覆盖 .gitignore
 | 想快速验证功能/新改动                                  | `/quick-start "验证诉求与预期结果"`                                                                                                                                                                                                                                                            |
 | 想管理多模型配置                                       | `claude-lab switch <profile>`                                                                                                                                                                                                                                                                  |
 | 想更新全局个人指令                                     | 修改 `settings/CLAUDE.md` 后 `claude-lab deploy settings`                                                                                                                                                                                                                                      |
+| 想更新 VSCode 配置                                     | 修改 `settings/vscode/` 后 `claude-lab vscode`（`--check` 仅检查差异）                                                                                                                                                                                                                         |
 | 想用规范驱动开发                                       | `claude-lab deploy openspec`，然后 `/opsx:propose`                                                                                                                                                                                                                                             |
 | 想查看有哪些可用模块                                   | `claude-lab list`                                                                                                                                                                                                                                                                              |
 

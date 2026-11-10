@@ -23,6 +23,11 @@ const TYPES = ["skills", "agents", "commands", "rules", "hooks", "workflows", "d
 const SETTINGS_MODULE = "settings";
 const SETTINGS_DEPLOY_FILES = ["CLAUDE.md"];
 
+// VSCode 用户配置同步：settings/vscode/ 下的文件 → 本地 VSCode User 目录。
+// 对应顶层 manifest.json 的 {VSCodeSettings} / {VSCodeKeybindings}，
+// 由 `claude-lab vscode` 独立执行（不并入 deploy --all，避免误覆盖本地编辑器配置）
+const VSCODE_FILES = ["settings.json", "keybindings.json"];
+
 // ~/.claude/ 根：单模块 dist/ 即其全量镜像（隐式），套件经 manifest.json 声明映射子集
 const CLAUDE_ROOT = path.join(HOME, ".claude");
 
@@ -92,6 +97,25 @@ function copyDir(src, dest) {
     }
   }
   return true;
+}
+
+// VSCode User 目录：按平台解析，Windows 优先 APPDATA，缺失时回退用户目录
+function getVSCodeUserDir() {
+  if (process.platform === "win32") {
+    const appData = process.env.APPDATA || path.join(HOME, "AppData", "Roaming");
+    return path.join(appData, "Code", "User");
+  }
+  if (process.platform === "darwin") {
+    return path.join(HOME, "Library", "Application Support", "Code", "User");
+  }
+  return path.join(HOME, ".config", "Code", "User");
+}
+
+// 文本文件比较：忽略 CRLF/LF 差异，避免仅行尾不同就重写本地配置
+function textEquals(a, b) {
+  const normalize = (file) =>
+    fs.readFileSync(file, "utf-8").replace(/\r\n/g, "\n");
+  return normalize(a) === normalize(b);
 }
 
 // 镜像核对：srcDir 下所有文件按相对路径在 destRoot 下逐一检查，
@@ -1060,6 +1084,69 @@ function cmdGitInit() {
   info("之后 claude-lab deploy/switch 造成的文件变化，用 git status / git diff 即可追踪");
 }
 
+// 同步 VSCode 用户配置：settings/vscode/* → 本地 VSCode User 目录
+function cmdVSCode(args) {
+  const check = args.includes("--check");
+  for (const a of args) {
+    if (a !== "--check") {
+      error(`未知参数: ${a}`);
+    }
+  }
+
+  const srcDir = path.join(ROOT, SETTINGS_MODULE, "vscode");
+  const destDir = getVSCodeUserDir();
+
+  log(`${check ? "检查" : "同步"}: ${SETTINGS_MODULE}/vscode → ${destDir}`);
+  if (!check) {
+    fs.mkdirSync(destDir, { recursive: true });
+  }
+
+  let drift = 0;
+  for (const file of VSCODE_FILES) {
+    const src = path.join(srcDir, file);
+    if (!fs.existsSync(src)) {
+      error(`缺少文件: ${SETTINGS_MODULE}/vscode/${file}`);
+    }
+
+    const dest = path.join(destDir, file);
+    const exists = fs.existsSync(dest);
+    const same = exists && textEquals(src, dest);
+
+    if (check) {
+      if (!exists) {
+        log(`  ❌ ${file} - 未部署`);
+        drift++;
+      } else if (same) {
+        log(`  ✅ ${file} - 已同步`);
+      } else {
+        log(`  ⚠️  ${file} - 与仓库不一致`);
+        drift++;
+      }
+      continue;
+    }
+
+    if (same) {
+      log(`  ✅ ${file} - 已是最新`);
+      continue;
+    }
+
+    fs.copyFileSync(src, dest);
+    log(`  ${exists ? "📄" : "➕"} ${file} → ${dest}`);
+  }
+
+  if (check) {
+    if (drift > 0) {
+      process.exitCode = 1;
+      info(`发现 ${drift} 个文件与仓库不一致，运行 claude-lab vscode 更新`);
+    } else {
+      success("VSCode 配置已是最新");
+    }
+    return;
+  }
+
+  success("VSCode 配置同步完成（VS Code 通常会自动重载）");
+}
+
 function showHelp() {
   log(`
 🔧 claude-lab - Claude Skill Lab CLI
@@ -1079,6 +1166,8 @@ function showHelp() {
   claude-lab switch <profile> 切换模型配置
   claude-lab switch <profile> --ephemeral  临时切换
   claude-lab gitinit       初始化 ~/.claude 本地 git 追踪（git init + .gitignore）
+  claude-lab vscode        同步 VSCode 用户配置（settings/vscode → 本地）
+  claude-lab vscode --check  仅检查 VSCode 配置是否与仓库一致
 
 示例:
   claude-lab deploy skill-forge
@@ -1086,6 +1175,7 @@ function showHelp() {
   claude-lab deploy settings
   claude-lab deploy --all --switch deepseek
   claude-lab switch deepseek
+  claude-lab vscode
   claude-lab status
 `);
 }
@@ -1138,6 +1228,9 @@ function main() {
         break;
       case "gitinit":
         cmdGitInit();
+        break;
+      case "vscode":
+        cmdVSCode(subArgs);
         break;
       default:
         error(`未知命令: ${cmd}\n运行 claude-lab 查看帮助`);

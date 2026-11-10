@@ -89,7 +89,7 @@
   // 7. Claude Code 插件（你的核心需求）
   // ============================================
   "claudeCode.preferredLocation": "panel",
-  "claudeCode.useTerminal": true,
+  "claudeCode.useTerminal": false,
   "claudeCode.disableLoginPrompt": true,
   "claudeCode.initialPermissionMode": "acceptEdits",
   "claudeCode.lockEditorGroups": false,
