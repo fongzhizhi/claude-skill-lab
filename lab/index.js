@@ -299,7 +299,9 @@ function readMeta(modulePath) {
 }
 
 // 逐个执行 meta.json 中声明的依赖检查命令，返回是否全部满足；
-// required === false 的依赖只提示不拦截
+// required === false 的依赖只提示不拦截；
+// 必需依赖缺失且声明了 autoInstall 时自动执行安装命令（cwd 为仓库根，输出透传），
+// 成功后复验 check，复验仍失败或安装失败才拦截部署
 function checkDependencies(modulePath) {
   const meta = readMeta(modulePath);
   if (!meta) {
@@ -310,20 +312,45 @@ function checkDependencies(modulePath) {
   const deps = meta.dependencies || [];
   let allOk = true;
 
-  for (const dep of deps) {
-    if (!dep.check) continue;
+  const isInstalled = (dep) => {
     try {
       execSync(dep.check, { stdio: "pipe", shell: true });
-      log(`  ✅ ${dep.name} 已安装`);
+      return true;
     } catch (e) {
-      log(`  ❌ ${dep.name} 未安装`);
-      if (dep.required !== false) {
-        allOk = false;
-        log(`  📦 安装命令: ${dep.install || "请手动安装"}`);
-      } else {
-        log(`  ⚠️  （可选依赖，仅提示）`);
-      }
+      return false;
     }
+  };
+
+  for (const dep of deps) {
+    if (!dep.check) continue;
+    if(isInstalled(dep)) {
+      log(`  ✅ ${dep.name} 已安装`);
+      continue;
+    }
+
+    log(`  ❌ ${dep.name} 未安装`);
+    if(dep.required === false) {
+      log(`  ⚠️  （可选依赖，仅提示）`);
+      continue
+    }
+
+    if(dep.autoInstall) {
+      log(`  📦 自动安装: ${dep.autoInstall}（在仓库根执行）`);
+      try {
+        execSync(dep.autoInstall, { stdio: "inherit", shell: true, cwd: ROOT });
+      } catch (e) {
+        error(`依赖 "${dep.name}" 自动安装失败，请手动执行: ${dep.autoInstall}`);
+      }
+      if(isInstalled(dep)) {
+        log(`  ✅ ${dep.name} 安装成功`);
+      } else {
+        error(`依赖 "${dep.name}" 安装后复验失败（check: ${dep.check}），请手动排查`);
+      }
+      continue;
+    }
+
+    allOk = false;
+    log(`  📦 安装命令: ${dep.install || "请手动安装"}`);
   }
 
   return allOk;
