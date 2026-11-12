@@ -1,7 +1,7 @@
 ---
 name: gitflow-core
-description: gitflow 套件的共享规则：唯一全局配置的读取与校验、操作仓库解析、环境链、工作区前置检查、多仓库改动检测（同名分支自动提交）、内嵌技能上下文、ONES 工单解析、分支命名与反解、环境提升的提交识别（源任务分支相对目标环境的未合入提交，不依赖源环境合并状态）与受限 cherry-pick 冲突解决、历史任务分支清理（先列后删、删除前复核）、远端 URL 推导与 Git 安全边界。执行 /gitflow:start、/gitflow:sync、/gitflow:commit、/gitflow:merge、/gitflow:promote、/gitflow:clean 前必须先读取本技能；/gitflow:init 复用本文件的配置校验规则，并在首次初始化时自动探测环境链（全流程非交互）。单个命令只描述自身流程，通用规则以本文件为准。
-version: 0.6.0
+description: gitflow 套件的共享规则：唯一全局配置的读取与校验、操作仓库解析、环境链、工作区前置检查、多仓库改动检测（同名分支自动提交）、内嵌技能上下文、ONES 工单解析、分支命名与反解、环境提升的提交识别（只取源任务分支自有提交，排除源环境历史与目标环境已含/补丁等价提交，不依赖源环境合并状态）与受限 cherry-pick 冲突解决、历史任务分支清理（先列后删、删除前复核）、远端 URL 推导与 Git 安全边界。执行 /gitflow:start、/gitflow:sync、/gitflow:commit、/gitflow:merge、/gitflow:promote、/gitflow:clean 前必须先读取本技能；/gitflow:init 复用本文件的配置校验规则，并在首次初始化时自动探测环境链（全流程非交互）。单个命令只描述自身流程，通用规则以本文件为准。
+version: 0.6.1
 ---
 # gitflow-core
 
@@ -277,7 +277,9 @@ git -C <root> ls-remote --exit-code --heads <remote> <branch>
 - 显式 `[环境]` 必须属于 `active`、在 `chain` 中高于源环境；跳过中间环境时输出警告，`merge_type` 记为“用户指定”
 - 缺省目标为 `chain` 中源环境之后的第一个 `active` 环境；不存在 → 已在链式顶端，停摆
 - 目标环境与源环境相同或更低 → 停摆
-- 提交清单由源任务分支与目标环境的对称差计算（`rev-list --right-only --cherry-pick <remote>/<目标环境分支>...<source-tip>`），**不读取源环境分支的 merge/squash 状态**；源环境 MR 是否已合并不影响提升，两侧合入互不阻塞
+- 提交清单只包含**源任务分支自有提交**，即本轮 `/gitflow:start` 从源环境分支（`envs[<源环境>]`）创建任务分支之后新增的提交：以源环境分支为边界排除其可达历史，再排除目标环境已含提交与补丁等价提交（`rev-list --right-only --cherry-pick --no-merges <remote>/<目标环境分支>...<source-tip> --not <remote>/<源环境分支>`）。即使源环境与目标环境长期分叉，源环境历史提交也不进入清单
+- 源环境分支只用于确定“本任务从何处分叉”，**不检查源环境分支上的 merge/squash 状态**；源环境 MR 是否已合并不影响提升，两侧合入互不阻塞
+- 提升范围只有这一条判定规则，不得在清单较大或环境长期分叉时询问用户“按什么范围执行”或提供“只合并本次任务 / 全量 / 停摆”选项；清单异常（为空、源环境分支不可解析、疑似混入源环境历史）时停摆并建议用 `--commits`，不猜测
 
 > `envs` 是“环境名 → 完整远端分支名”的显式映射，不要求各仓库同构。同一环境在不同仓库可指向不同分支名（如 `4.1 → pro-api/0.3`），配置即可覆盖。
 

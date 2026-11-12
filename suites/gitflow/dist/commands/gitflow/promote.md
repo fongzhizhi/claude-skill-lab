@@ -1,11 +1,11 @@
 ---
 name: "gitflow:promote"
-description: 将任务分支的改动提升到更高环境，不要求源分支已合入源环境：解析源/目标环境，直接以源任务分支相对目标环境的未合入提交作为 cherry-pick 清单（可用 --commits 覆盖），从目标环境新建任务分支，逐一 cherry-pick（限额内自动解决冲突，无法解决则停摆），推送后按 /gitflow:merge 创建 MR。支持 --repo / --repos 逐仓库处理，兄弟仓库用临时 worktree 不切换主工作区；提交清单为空、分支已存在、冲突超限或 MR 失败时停摆。
+description: 将任务分支的改动提升到更高环境，不要求源分支已合入源环境：解析源/目标环境，以源任务分支自有提交（本轮 /gitflow:start 从源环境分支创建之后新增的提交；排除源环境历史提交与目标环境已含/补丁等价提交）作为 cherry-pick 清单（可用 --commits 覆盖），从目标环境新建任务分支，逐一 cherry-pick（限额内自动解决冲突，无法解决则停摆），推送后按 /gitflow:merge 创建 MR。支持 --repo / --repos 逐仓库处理，兄弟仓库用临时 worktree 不切换主工作区；提交清单为空、分支已存在、冲突超限或 MR 失败时停摆。
 category: git
 ---
 # /gitflow:promote
 
-把**任务分支的改动**提升到更高环境，**不要求源分支已合入源环境**。核心流程：从目标环境新建任务分支 → 逐一 cherry-pick 源任务分支上尚未进入目标环境的提交 → 按 `/gitflow:merge` 创建 MR。**执行前必须先读取 `~/.claude/skills/gitflow-core/SKILL.md`**。
+把**任务分支的改动**提升到更高环境，**不要求源分支已合入源环境**。核心流程：从目标环境新建任务分支 → 逐一 cherry-pick **源任务分支自有提交**（本轮 `/gitflow:start` 从源环境分支创建之后新增的提交；排除源环境历史提交、目标环境已含提交与补丁等价提交）→ 按 `/gitflow:merge` 创建 MR。**执行前必须先读取 `~/.claude/skills/gitflow-core/SKILL.md`**。
 
 > 每次提升都使用独立的新任务分支（分支名中的 `{version}` 换成目标环境），不复用源任务分支，也不直接操作环境分支。冲突在提升分支上解决，不影响源任务分支与源/目标环境。源环境的 MR 无论是否已合并，都可以直接提升；两侧的合入互不阻塞。
 
@@ -16,7 +16,7 @@ category: git
 | `[环境]` | 目标环境，如 `dev`。缺省为 `chain` 中源环境之后的第一个 `active` 环境 |
 | `--repo <name>` | 操作配置 `repos` 中的指定仓库；缺省为当前仓库。该仓库当前必须检出源任务分支，执行时会切换其主工作区到新分支 |
 | `--repos <a,b,c\|all>` | 在操作仓库之外，依次处理指定的兄弟仓库；`all` 展开为配置中当前工作区可用、本地或远端存在源任务分支的仓库，能否提升由逐仓库提交清单判断。兄弟仓库使用临时 worktree，**不切换主工作区** |
-| `--commits <base>..<head>` | 覆盖自动清单，显式指定待 cherry-pick 范围；也可只给一个 `<sha>`。仅允许单仓库执行 |
+| `--commits <base>..<head>` | 覆盖自动清单，显式指定待 cherry-pick 范围；也可只给一个 `<sha>`。仍按同一范围语义排除源环境历史、目标环境已含与补丁等价提交。仅允许单仓库执行 |
 | `--reviewer @name` | 传给 MR 创建流程；可重复 |
 | `--no-reviewer` | 强制不指定审核人；与 `--reviewer` 同时出现 → 停摆 |
 | `--draft` | 创建 Draft MR |
@@ -73,34 +73,50 @@ category: git
       - 两者都存在：相同 → 用本地 tip；本地是远端祖先 → 用远端 tip（远端更新）；远端是本地祖先 → 用本地 tip；已分叉 → 该仓库失败，提示先同步源分支或用 `--commits`
       - 只存在一个 → 使用它
       - 都不存在 → 该仓库失败“找不到源任务分支，先 `/gitflow:commit` 推送”
-      - 输出注明 tip 来源；本命令不读取源环境分支，也不要求源环境上存在对应的 merge/squash 提交
+      - 输出注明 tip 来源；本命令**不检查源环境 MR 的合并状态**，也不要求在源环境上找到 merge/squash 提交；源环境分支本身只作为“本任务自有提交”的排除边界读取（第 4 小步）
 
    3. 若指定 `--commits`（仅单仓库）：
 
+      - 同样先解析并校验源环境分支可用（`git -C <root> rev-parse --verify --quiet refs/remotes/<remote>/<source-env-branch>`）；失败 → 该仓库失败“源环境分支不存在”
       - 含 `..`：校验 `base`、`head` 存在，`base` 是 `head` 祖先，`head` 是 `source-tip` 祖先或等于 `source-tip`；然后 `git -C <root> rev-list --reverse --no-merges <base>..<head>`。范围内若有 merge 提交，统计数量并在输出中警告“merge 提交被排除”
-      - 单个 `<sha>`：校验对象存在且**不是 merge 提交**（`git rev-list --parents -n 1` 只有两个字段）；作为唯一待 pick 提交。该提交不是 `source-tip` 祖先时允许，但输出中注明
+      - 单个 `<sha>`：校验对象存在且**不是 merge 提交**（`git rev-list --parents -n 1` 只有两个字段）；作为唯一候选提交（仍经第 5 小步排除源环境历史与目标环境已含项）。该提交不是 `source-tip` 祖先时允许，但输出中注明
       - 任一校验失败或结果为空 → 停摆
 
-   4. 未指定 `--commits` → 直接生成默认清单：
+   4. 未指定 `--commits` → 生成默认清单。先解析源环境分支（`envs[<源环境>]`）并确认它可用：
 
       ```bash
-      git -C <root> rev-list --reverse --no-merges --right-only --cherry-pick <remote>/<target-env-branch>...<source-tip>
+      git -C <root> rev-parse --verify --quiet refs/remotes/<remote>/<source-env-branch>
       ```
 
-      - 语义：源任务分支上尚未进入目标环境的提交；`--right-only` 只取源分支一侧，`--no-merges` 排除 merge 提交，`--cherry-pick` 排除目标环境已有补丁等价的提交
+      失败 → 该仓库失败“源环境分支不存在”，提示检查配置 `envs` 与远端分支是否存在。
+
+      然后按**源任务分支自有提交**生成清单：
+
+      ```bash
+      git -C <root> rev-list --reverse --no-merges --cherry-pick --right-only \
+        <remote>/<target-env-branch>...<source-tip> \
+        --not <remote>/<source-env-branch>
+      ```
+
+      - 语义：只取**本轮 `/gitflow:start` 从源环境分支创建该任务分支之后新增的提交**；源环境分支（如 `4.1`）上长期存在、尚未进入目标环境的历史提交**不属于本任务**，必须排除
+      - `--not <remote>/<source-env-branch>` 以源环境分支为边界排除其可达提交——即使源环境与目标环境长期分叉（如 `4.1` 与 `dev` 相差 270 条历史提交），这些 4.1 历史提交也不会进入清单
+      - `--right-only` 只取源分支一侧；`--no-merges` 排除 merge 提交；`--cherry-pick` 排除目标环境已有补丁等价的提交
       - 不依赖源环境上的 merge 提交、squash 提交或具体合并方式；源环境 MR 未合并、已合并、squash、rebase、fast-forward 都使用同一规则
       - `<remote>/<target-env-branch>` 无法解析 → 该仓库失败，提示检查配置 `envs` 与目标分支是否存在
-      - 统计右侧 merge 提交数（`git -C <root> rev-list --right-only --count --merges <remote>/<target-env-branch>...<source-tip>`）；大于 0 时在输出中警告“源分支包含合并提交，其冲突解决改动不会自动重放”
+      - 统计源分支自有 merge 提交数（`git -C <root> rev-list --right-only --cherry-pick --count --merges <remote>/<target-env-branch>...<source-tip> --not <remote>/<source-env-branch>`）；大于 0 时在输出中警告“源分支包含合并提交，其冲突解决改动不会自动重放”
+
+      > **范围判定只有这一条规则，不得向用户询问范围。** 不得因源环境与目标环境长期分叉、清单中出现大量提交而弹出“只合并本次任务提交 / 按自动清单全量 / 停摆”之类的选项；清单始终是「源任务分支自有提交 − 目标环境已含/补丁等价提交」。清单为空、源环境分支不可解析，或清单中出现与工单明显无关、疑似源环境历史的提交（如源环境分支被 force-push/重写）时，**停摆并报告**，建议用 `--commits` 显式限定，而不是让用户选择范围。
 
    5. 过滤与校验：
 
-      - 默认清单已由 `--cherry-pick` 完成补丁等价过滤，无需逐个再判断
-      - `--commits` 清单逐个判断：
-        - 祖先判断：`git -C <root> merge-base --is-ancestor <sha> <remote>/<target-env-branch>`，退出码 `0` → 跳过并记录
+      - 默认清单已由 `--not <remote>/<source-env-branch>` 与 `--cherry-pick` 完成“源环境历史 + 目标环境已含/补丁等价”过滤，无需逐个再判断
+      - `--commits` 清单逐个判断（显式覆盖同样只提升本任务自有提交，不因显式范围而重放源环境历史）：
+        - 源环境历史：`git -C <root> merge-base --is-ancestor <sha> <remote>/<source-env-branch>`，退出码 `0` → 跳过并记录“源环境历史提交，不属于本任务”
+        - 目标环境已含：`git -C <root> merge-base --is-ancestor <sha> <remote>/<target-env-branch>`，退出码 `0` → 跳过并记录
         - 补丁等价：`git -C <root> cherry <remote>/<target-env-branch> <head>`（`<head>` 为范围终点或单个 `<sha>`），输出中 `- <sha>` 的提交跳过并记录
       - 清单为空 → 该仓库失败“没有可提升的提交”
 
-   6. 输出提交清单（短 hash + subject）、跳过项与被排除的 merge 提交；`--dry-run` 在完成所有仓库的提交清单后停止。
+   6. 输出提交清单（短 hash + subject）、跳过项与被排除的 merge 提交；存在源环境历史提交时注明“源环境历史提交已排除，不属于本任务”；`--dry-run` 在完成所有仓库的提交清单后停止。
 
 7. **创建提升分支**（逐仓库，紧接第 6 步）。这一步等价于 `/gitflow:start` 从目标环境准备分支（同一 `branch_pattern`、同一 `--no-track` 规则），但复用第 3 步已反解的身份与工单，不重新解析工单：
 
@@ -194,7 +210,7 @@ category: git
 - `--repos` 中出现配置里不存在的仓库名
 - 操作仓库工作区不干净、进行中操作或 detached HEAD
 - 源任务分支在本地与远端都不存在，或本地/远端已分叉（显式列出的兄弟仓库记录失败后继续）
-- `--commits` 非法、单提交模式用于多仓库、目标环境分支不存在、提交清单为空
+- `--commits` 非法、单提交模式用于多仓库、源环境或目标环境分支不存在、提交清单为空
 - 新分支本地或远端已存在、分支名非法或指向保护分支
 - 临时 worktree 创建失败、冲突超出 core §5.5 限额、cherry-pick 非冲突失败/空提交
 - 推送失败、MR 冲突预检失败、glab 不可用或创建失败
@@ -212,7 +228,8 @@ category: git
 
 ### 提交清单
 - 源分支 tip: a1b2c3d（本地，与远端一致；不检查是否已合入 4.1）
-- 识别方式: 源分支相对 origin/pro-pcb/dev 的未合入提交
+- 识别方式: 源任务分支自有提交（本轮 start 之后），排除 4.1 历史、origin/pro-pcb/dev 已含与补丁等价提交
+- 源环境历史提交: 已排除（4.1 与 dev 长期分叉，历史提交不属于本任务）
 - 待 cherry-pick:
   1. 1111111 fix: 修复背景色持久化
   2. 2222222 fix: 补充颜色设置单测

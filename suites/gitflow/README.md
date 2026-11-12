@@ -15,7 +15,7 @@
 | 命令 | `/gitflow:sync` | 把所属环境分支的最新改动合入当前任务分支（fetch → 比较 → merge）；冲突时可在限额内由 AI 尝试解决，确认后提交，否则停摆 |
 | 命令 | `/gitflow:commit` | `git add -A` → mojibake-fixer → format-keeper → `git add -A` → commit-draft → commit → push；其他仓库与当前分支同名时自动提交同一任务，不同分支的改动忽略 |
 | 命令 | `/gitflow:merge` | fetch 后校验推送状态 → `merge-tree` 冲突预检（注明快照）→ 按命令行/仓库配置/全局配置解析审核人 → 用 glab 创建合入所属环境的 MR |
-| 命令 | `/gitflow:promote` | 把任务分支的改动提升到更高环境，**不要求源分支已合入源环境**：以源任务分支相对目标环境的未合入提交作为 cherry-pick 清单（`--commits` 可覆盖）→ 从目标环境新建任务分支 → 逐一 cherry-pick（限额内自动解决冲突，无法解决则停摆）→ 推送并按 `/gitflow:merge` 创建 MR；`--repos` 逐仓库处理，兄弟仓库用临时 worktree |
+| 命令 | `/gitflow:promote` | 把任务分支的改动提升到更高环境，**不要求源分支已合入源环境**：以**源任务分支自有提交**（本轮 `/gitflow:start` 之后新增，排除源环境历史与目标环境已含/补丁等价提交）作为 cherry-pick 清单（`--commits` 可覆盖）→ 从目标环境新建任务分支 → 逐一 cherry-pick（限额内自动解决冲突，无法解决则停摆）→ 推送并按 `/gitflow:merge` 创建 MR；`--repos` 逐仓库处理，兄弟仓库用临时 worktree |
 | 命令 | `/gitflow:clean` | 按用户名前缀扫描历史任务分支：最后提交早于 `--days`（默认 30 天）的本地/远端分支列成候选（含最后提交时间与摘要），**第一阶段只列不删**；用户明确回复“全部删除 / 保留 N / 只删 N / 只删本地或远端”后才删除，删除前复核 SHA，分支更新或消失则跳过；`--repo` / `--repos` 逐仓库扫描 |
 | 技能 | `gitflow-core` | 共享规则：配置、操作仓库、环境链、前置检查、多仓库检测、ONES 解析、分支命名、远端 URL 推导、安全边界 |
 | 文档 | `gitflow-config` | 配置参考（部署到 `~/.claude/docs/`，按需引用） |
@@ -145,19 +145,19 @@ heep:ones.lceda.com/project/#team/TkSb58GQ/issue/PRO-159115
 - 任务分支从**所属环境**拉出，只合回该环境
 - 未指定环境 → `default_env`（链式顶端，通常 `dev`）
 - `/gitflow:sync` 的方向是**环境分支 → 任务分支**：把所属环境的最新改动合入任务分支
-- 环境之间的提升用 `/gitflow:promote`：从目标环境新建任务分支 → cherry-pick 原提交 → 再走 `/gitflow:merge`；每次提升使用独立分支，源环境 MR 未合并也可以直接提升，两侧合入互不阻塞
+- 环境之间的提升用 `/gitflow:promote`：从目标环境新建任务分支 → cherry-pick 本任务提交（不含源环境历史）→ 再走 `/gitflow:merge`；每次提升使用独立分支，源环境 MR 未合并也可以直接提升，两侧合入互不阻塞
 
 ### 环境提升
 
 运行 `/gitflow:promote [环境]` 把当前任务分支的改动提升到更高环境，**不要求源环境 MR 已合并**：
 
 1. **确定源/目标**：源环境取自当前任务分支的 `{version}`；目标缺省为 `chain` 中源环境之后的第一个 `active` 环境，也可显式指定（跳过中间环境会警告）
-2. **生成提交清单**：取源任务分支 tip（本地/远端较新者，分叉则停摆），用 `git rev-list --reverse --no-merges --right-only --cherry-pick <remote>/<目标环境分支>...<source-tip>` 得到“源分支上尚未进入目标环境”的提交；`--commits <base>..<head>` 或单个 `<sha>` 可覆盖。该规则不读取源环境分支的 merge/squash 状态——源环境 MR 未合并、已合并、squash、rebase、fast-forward 都适用
+2. **生成提交清单**：取源任务分支 tip（本地/远端较新者，分叉则停摆），用 `git rev-list --reverse --no-merges --right-only --cherry-pick <remote>/<目标环境分支>...<source-tip> --not <remote>/<源环境分支>` 得到**源任务分支自有提交**（本轮 `/gitflow:start` 之后新增）：`--not <remote>/<源环境分支>` 排除源环境历史——即使 4.1 与 dev 长期分叉，4.1 上那批历史提交也不会进入清单；`--cherry-pick` 排除目标环境已有补丁等价提交。`--commits <base>..<head>` 或单个 `<sha>` 可覆盖，覆盖后同样跳过源环境历史与目标环境已含项。该规则不检查源环境 MR 的 merge/squash 状态——源环境 MR 未合并、已合并、squash、rebase、fast-forward 都适用；范围只有这一种判定方式，**不因清单较大而询问“按什么范围执行”**
 3. **新建提升分支**：按 `branch_pattern` 把 `{version}` 换成目标环境，从 `<remote>/<目标环境分支>` 创建并 `--no-track`；源分支与目标分支都保持不动
 4. **逐一 cherry-pick**：从旧到新重放提交；冲突在 core §5.5 限额内自动解决并 `--continue`，超出限额或非冲突失败则停摆并保留现场
 5. **创建 MR**：推送提升分支后按 `/gitflow:merge` 的流程创建目标 MR，`merge_type` 记为“链式同步”或“用户指定”；输出的 MR 链接单独一行，只给原始 URL
 
-已存在于目标环境或补丁等价的提交会跳过；清单为空视为该仓库没有可提升内容；`--dry-run` 只输出提交清单与分支计划。多仓库提升用 `--repos <a,b,c|all>` 显式列出，兄弟仓库在临时 worktree 中处理、不切换主工作区；不因为检出同名分支就自动提升。一个仓库失败不阻断其他仓库。
+已存在于目标环境、补丁等价或属于源环境历史的提交会跳过；清单为空视为该仓库没有可提升内容；`--dry-run` 只输出提交清单与分支计划。多仓库提升用 `--repos <a,b,c|all>` 显式列出，兄弟仓库在临时 worktree 中处理、不切换主工作区；不因为检出同名分支就自动提升。一个仓库失败不阻断其他仓库。
 
 ### 历史分支清理
 
