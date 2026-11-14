@@ -53,6 +53,9 @@
   // 4. 工作区与文件管理
   // ============================================
   "workbench.startupEditor": "none",
+  // 次级侧边栏（Copilot Chat 所在容器）默认隐藏，避免每次打开工作区自动弹出聊天面板；
+  // 需要时用快捷键或命令面板手动打开，打开后不影响本次会话使用
+  "workbench.secondarySideBar.defaultVisibility": "hidden",
   "workbench.iconTheme": "vscode-icons",
   "workbench.colorTheme": "Dark+",
   "explorer.confirmDelete": false,
